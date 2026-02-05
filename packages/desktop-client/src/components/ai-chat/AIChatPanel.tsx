@@ -20,22 +20,27 @@ import { Text } from '@actual-app/components/text';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatSessionList } from './ChatSessionList';
 import { ChatSettings } from './ChatSettings';
+import { PasswordManager } from './PasswordManager';
 
 export function AIChatPanel() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(
+    null,
+  );
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
   const [preferences, setPreferences] = useState<ChatPreferences | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [needsUnlock, setNeedsUnlock] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadSessions();
     loadPreferences();
+    checkPasswordNeeded();
   }, []);
 
   useEffect(() => {
@@ -60,6 +65,17 @@ export function AIChatPanel() {
     }
   };
 
+  const checkPasswordNeeded = async () => {
+    try {
+      const status = await send('ai-chat-check-master-password');
+      if (status.needed && status.hasPassword) {
+        setNeedsUnlock(true);
+      }
+    } catch {
+      // Ignore errors
+    }
+  };
+
   const loadPreferences = async () => {
     const prefs = await send('ai-chat-get-preferences');
     setPreferences(prefs);
@@ -70,7 +86,7 @@ export function AIChatPanel() {
     const { sessionId } = await send('ai-chat-create-session', {
       title: `Chat ${new Date().toLocaleString()}`,
     });
-    
+
     const session = await send('ai-chat-get-session', { sessionId });
     setCurrentSession(session);
     await loadSessions();
@@ -170,6 +186,28 @@ export function AIChatPanel() {
       sendMessage();
     }
   };
+
+  if (needsUnlock) {
+    return (
+      <View
+        style={{
+          height: '100%',
+          backgroundColor: theme.pageBackground,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <PasswordManager
+          mode="unlock"
+          onComplete={() => {
+            setNeedsUnlock(false);
+            loadPreferences();
+          }}
+        />
+      </View>
+    );
+  }
 
   if (showSettings) {
     return (

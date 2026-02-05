@@ -14,6 +14,8 @@ import { Input } from '@actual-app/components/input';
 import { View } from '@actual-app/components/view';
 import { Text } from '@actual-app/components/text';
 
+import { PasswordManager } from './PasswordManager';
+
 type ChatSettingsProps = {
   onClose: () => void;
 };
@@ -27,10 +29,16 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
     platform: string;
     isSecure: boolean;
   } | null>(null);
+  const [pwdStatus, setPwdStatus] = useState<{
+    hasPassword: boolean;
+    needed: boolean;
+  } | null>(null);
+  const [showPwdSetup, setShowPwdSetup] = useState(false);
 
   useEffect(() => {
     loadPreferences();
     checkSecurityStatus();
+    checkPasswordStatus();
   }, []);
 
   const modelOptions: Record<
@@ -57,6 +65,15 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
       setSecurityStatus(status);
     } catch (error) {
       console.error('Failed to check security status:', error);
+    }
+  };
+
+  const checkPasswordStatus = async () => {
+    try {
+      const status = await send('ai-chat-check-master-password');
+      setPwdStatus(status);
+    } catch (error) {
+      console.error('Failed to check password status:', error);
     }
   };
 
@@ -188,12 +205,36 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             lineHeight: 1.5,
             display: 'block',
             wordWrap: 'break-word',
+            marginBottom: pwdStatus?.needed && !pwdStatus?.hasPassword ? 12 : 0,
           }}
         >
           {securityStatus?.isSecure
             ? `API keys are securely encrypted using ${securityStatus.platform} credential storage.`
-            : `API keys are stored in browser preferences without encryption. For secure encrypted storage, use the desktop application. The web environment does not support secure credential storage at this time.`}
+            : pwdStatus?.hasPassword
+              ? 'API keys are encrypted with your master password.'
+              : 'API keys are stored without encryption. Set up a master password to encrypt them.'}
         </Text>
+
+        {pwdStatus?.needed && !pwdStatus?.hasPassword && !showPwdSetup && (
+          <Button
+            onClick={() => setShowPwdSetup(true)}
+            variant="normal"
+            style={{ marginTop: 8 }}
+          >
+            Set Up Master Password
+          </Button>
+        )}
+
+        {showPwdSetup && (
+          <PasswordManager
+            mode="create"
+            onComplete={() => {
+              setShowPwdSetup(false);
+              checkPasswordStatus();
+              checkSecurityStatus();
+            }}
+          />
+        )}
       </View>
 
       {/* General Settings */}

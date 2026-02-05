@@ -95,4 +95,53 @@ app.method('ai-chat-check-security', async function () {
   };
 });
 
+// Custom password vault handlers for web encryption
+app.method('ai-chat-setup-master-password', async function ({ password }) {
+  const platformType = isElectron() ? 'electron' : 'browser';
+
+  if (platformType === 'electron') {
+    return { success: false, error: 'Not required on desktop' };
+  }
+
+  const credMod = await import('../../platform/server/credentials');
+  const setupFunc = credMod['setMasterPassword'];
+
+  if (!setupFunc) {
+    return { success: false, error: 'Feature unavailable' };
+  }
+
+  await setupFunc(password);
+  return { success: true };
+});
+
+app.method('ai-chat-unlock-master-password', async function ({ password }) {
+  if (isElectron()) {
+    return { success: true };
+  }
+
+  const credMod = await import('../../platform/server/credentials');
+  const unlockFunc = credMod['unlockWithMasterPassword'];
+
+  if (!unlockFunc) {
+    return { success: false };
+  }
+
+  const result = await unlockFunc(password);
+  return { success: result };
+});
+
+app.method('ai-chat-check-master-password', async function () {
+  if (isElectron()) {
+    return { hasPassword: false, needed: false };
+  }
+
+  const storage = await import('../../platform/server/asyncStorage');
+  const flagValue = await storage.getItem('ai-chat-secure-storage-enabled');
+
+  return {
+    hasPassword: flagValue === 'true',
+    needed: true,
+  };
+});
+
 export type { AIChatHandlers };

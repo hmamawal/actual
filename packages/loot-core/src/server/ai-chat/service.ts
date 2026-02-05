@@ -17,6 +17,24 @@ import { BudgetDataContextProvider } from './data-context';
 import type { IAIProvider, ProviderMessage } from './providers/base';
 import { ProviderFactory } from './providers/factory';
 
+// Custom diagnostic logger
+class DiagnosticLogger {
+  private prefix = '[AI-Chat-Debug]';
+
+  logOperation(op: string, details: Record<string, unknown>) {
+    console.log(`${this.prefix} ${op}:`, JSON.stringify(details, null, 2));
+  }
+
+  logError(op: string, err: Error | unknown) {
+    console.error(`${this.prefix} ERROR in ${op}:`, {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+  }
+}
+
+const diagnostics = new DiagnosticLogger();
+
 export class AIChatService {
   private sessions: Map<string, ChatSession> = new Map();
   private dataProvider: BudgetDataContextProvider;
@@ -72,8 +90,15 @@ export class AIChatService {
     attachments?: MessageAttachment[],
     includeScreenContext = true,
   ): Promise<{ messageId: string; response: ChatMessage }> {
+    diagnostics.logOperation('sendMessage.start', {
+      sessionId: sessionId.substring(0, 8),
+      msgLen: message.length,
+      hasAttach: !!attachments?.length,
+    });
+
     const session = this.sessions.get(sessionId);
     if (!session) {
+      diagnostics.logError('sendMessage', new Error('Session lookup failed'));
       throw new Error('Session not found');
     }
 
@@ -89,93 +114,136 @@ export class AIChatService {
 
     session.messages.push(userMessage);
 
-    // Get preferences and provider
-    const preferences = await this.getPreferences();
-    const providerConfig = preferences.providers.find(
-      p => p.provider === preferences.defaultProvider,
-    );
+    try {
+      // Get preferences and provider
+      const preferences = await this.getPreferences();
+      diagnostics.logOperation('preferences.loaded', {
+        defaultProv: preferences.defaultProvider,
+        provCount: preferences.providers.length,
+      });
 
-    if (!providerConfig || !providerConfig.enabled) {
-      throw new Error('No AI provider configured');
-    }
+      const providerConfig = preferences.providers.find(
+        p => p.provider === preferences.defaultProvider,
+      );
 
-    const provider = ProviderFactory.createProvider(providerConfig);
-
-    if (!provider) {
-      throw new Error('Missing or invalid API key for provider');
-    }
-
-    // Build context
-    const context = await this.buildContext(
-      session,
-      includeScreenContext,
-      preferences,
-    );
-
-    // Convert messages to provider format
-    const providerMessages = this.convertMessagesToProviderFormat(
-      session.messages,
-      context,
-      attachments,
-    );
-
-    // Send to AI provider
-    const startTime = Date.now();
-    const providerResponse = await provider.sendMessage(providerMessages, {
-      model: providerConfig.defaultModel || undefined,
-      maxTokens: 4096,
-      temperature: 0.7,
-    });
-    const executionTime = Date.now() - startTime;
-
-    // Check if response contains code to execute
-    const codeMatch = providerResponse.content.match(
-      /```(?:javascript|js|code)\n([\s\S]*?)```/,
-    );
-
-    let visualizations: Visualization[] | undefined;
-    if (codeMatch && codeMatch[1]) {
-      try {
-        const budgetContext = await this.dataProvider.getBudgetContext();
-        const execResult = await this.codeExecutor.executeVisualizationCode(
-          codeMatch[1],
-          budgetContext,
+      if (!providerConfig || !providerConfig.enabled) {
+        diagnostics.logError(
+          'provider.config',
+          new Error(
+            providerConfig ? 'Provider disabled' : 'Provider not found',
+          ),
         );
-
-        if (execResult.visualization) {
-          visualizations = [execResult.visualization];
-        }
-      } catch (error) {
-        console.error('Failed to execute visualization code:', error);
+        throw new Error('No AI provider configured');
       }
+
+      diagnostics.logOperation('provider.check', {
+        name: providerConfig.provider,
+        hasKey: !!providerConfig.apiKey,
+        keyLen: providerConfig.apiKey?.length || 0,
+        modelSet: providerConfig.defaultModel || 'default',
+      });
+
+      const provider = ProviderFactory.createProvider(providerConfig);
+
+      if (!provider) {
+        diagnostics.logError(
+          'provider.factory',
+          new Error('Factory returned null'),
+        );
+        throw new Error('Missing or invalid API key for provider');
+      }
+
+      // Build context
+      const context = await this.buildContext(
+        session,
+        includeScreenContext,
+        preferences,
+      );
+
+      // Convert messages to provider format
+      const providerMessages = this.convertMessagesToProviderFormat(
+        session.messages,
+        context,
+        attachments,
+      );
+
+      diagnostics.logOperation('api.call', {
+        provider: providerConfig.provider,
+        msgCount: providerMessages.length,
+        model: providerConfig.defaultModel,
+      });
+
+      // Send to AI provider
+      const startTime = Date.now();
+      const providerResponse = await provider.sendMessage(providerMessages, {
+        model: providerConfig.defaultModel || undefined,
+        maxTokens: 4096,
+        temperature: 0.7,
+      });
+      const executionTime = Date.now() - startTime;
+
+      diagnostics.logOperation('api.response', {
+        responseLen: providerResponse.content.length,
+        timeMs: executionTime,
+        modelUsed: providerResponse.model,
+      });
+
+      // Check if response contains code to execute
+      const codeMatch = providerResponse.content.match(
+        /```(?:javascript|js|code)\n([\s\S]*?)```/,
+      );
+
+      let visualizations: Visualization[] | undefined;
+      if (codeMatch && codeMatch[1]) {
+        try {
+          const budgetContext = await this.dataProvider.getBudgetContext();
+          const execResult = await this.codeExecutor.executeVisualizationCode(
+            codeMatch[1],
+            budgetContext,
+          );
+
+          if (execResult.visualization) {
+            visualizations = [execResult.visualization];
+          }
+        } catch (error) {
+          diagnostics.logError('visualization.exec', error);
+        }
+      }
+
+      // Create assistant message
+      const assistantMessageId = uuidv4();
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: providerResponse.content,
+        timestamp: Date.now(),
+        visualizations,
+        metadata: {
+          model: providerResponse.model,
+          tokens:
+            providerResponse.tokens &&
+            providerResponse.tokens.input + providerResponse.tokens.output,
+          executionTime,
+        },
+      };
+
+      session.messages.push(assistantMessage);
+      session.updatedAt = Date.now();
+
+      await this.saveSessions();
+
+      diagnostics.logOperation('sendMessage.complete', {
+        success: true,
+      });
+
+      return {
+        messageId: assistantMessageId,
+        response: assistantMessage,
+      };
+    } catch (err) {
+      diagnostics.logError('sendMessage', err);
+      throw err;
     }
-
-    // Create assistant message
-    const assistantMessageId = uuidv4();
-    const assistantMessage: ChatMessage = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: providerResponse.content,
-      timestamp: Date.now(),
-      visualizations,
-      metadata: {
-        model: providerResponse.model,
-        tokens:
-          providerResponse.tokens &&
-          providerResponse.tokens.input + providerResponse.tokens.output,
-        executionTime,
-      },
-    };
-
-    session.messages.push(assistantMessage);
-    session.updatedAt = Date.now();
-
-    await this.saveSessions();
-
-    return {
-      messageId: assistantMessageId,
-      response: assistantMessage,
-    };
   }
 
   private getProvider(preferences: ChatPreferences): IAIProvider | null {
