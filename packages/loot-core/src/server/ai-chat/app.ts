@@ -84,11 +84,11 @@ app.method('ai-chat-check-security', async function () {
   const platform = isElectron() ? 'desktop' : 'web';
   
   // On desktop, safeStorage provides secure encryption
-  // On web, credentials are encrypted with master password
-  const isSecure = platform === 'desktop'; // Desktop always has secure storage via Electron safeStorage
+  // On web, credentials would be stored in browser preferences (not encrypted by default)
+  const isSecure = platform === 'desktop';
   
   return {
-    platform: isSecure ? 'Electron safeStorage' : 'Web Crypto with Master Password',
+    platform: isSecure ? 'Electron safeStorage' : 'Browser Preferences',
     isSecure,
   };
 });

@@ -135,12 +135,15 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         padding: 20,
         height: '100%',
         overflowY: 'auto',
+        maxWidth: 800,
+        margin: '0 auto',
       }}
     >
       {/* Header */}
       <View
         style={{
           display: 'flex',
+          flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 20,
@@ -174,10 +177,10 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         >
           {securityStatus?.isSecure ? '🔒 Secure Storage' : '⚠️ Warning: Plain Text Storage'}
         </Text>
-        <Text style={{ fontSize: 13, lineHeight: 1.5, display: 'block' }}>
+        <Text style={{ fontSize: 13, lineHeight: 1.5, display: 'block', wordWrap: 'break-word' }}>
           {securityStatus?.isSecure ?
             `API keys are securely encrypted using ${securityStatus.platform} credential storage.`
-          : `API keys are stored in browser preferences in this environment. For encrypted storage, use the desktop app or enable secure storage.`}
+          : `API keys are stored in browser preferences without encryption. For secure encrypted storage, use the desktop application. The web environment does not support secure credential storage at this time.`}
         </Text>
       </View>
 
@@ -212,7 +215,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
           </select>
         </View>
 
-        <View style={{ marginBottom: 15, display: 'flex', alignItems: 'center' }}>
+        <View style={{ marginBottom: 15, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <input
             type="checkbox"
             checked={preferences.autoCapture}
@@ -223,10 +226,10 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
               })
             }
           />
-          <Text style={{ marginLeft: 8 }}>Auto-capture screen context</Text>
+          <Text style={{ flexShrink: 1 }}>Auto-capture screen context</Text>
         </View>
 
-        <View style={{ marginBottom: 15, display: 'flex', alignItems: 'center' }}>
+        <View style={{ marginBottom: 15, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <input
             type="checkbox"
             checked={preferences.includeTransactionData}
@@ -237,7 +240,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
               })
             }
           />
-          <Text style={{ marginLeft: 8 }}>
+          <Text style={{ flexShrink: 1 }}>
             Include transaction data in context
           </Text>
         </View>
@@ -278,14 +281,16 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
               <View
                 style={{
                   display: 'flex',
+                  flexDirection: 'row',
                   justifyContent: 'space-between',
+                  alignItems: 'center',
                   marginBottom: 10,
                 }}
               >
                 <Text style={{ fontSize: 14, fontWeight: 600 }}>
                   {provider === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (GPT)'}
                 </Text>
-                <View style={{ display: 'flex', alignItems: 'center' }}>
+                <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <input
                     type="checkbox"
                     checked={config.enabled}
@@ -295,7 +300,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
                       })
                     }
                   />
-                  <Text style={{ marginLeft: 6 }}>Enabled</Text>
+                  <Text>Enabled</Text>
                 </View>
               </View>
 

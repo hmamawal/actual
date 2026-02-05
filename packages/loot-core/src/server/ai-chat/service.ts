@@ -396,6 +396,8 @@ export class AIChatService {
               'Secure credential storage unavailable; storing API key in preferences.',
               error,
             );
+            // Keep the API key in preferences as fallback when secure storage fails
+            // This ensures the key is not lost and can still be used
           }
         }
 
