@@ -12,14 +12,17 @@ const service = getAIChatService();
 // Initialize sessions on startup
 service.loadSessions().catch(console.error);
 
-app.method('ai-chat-send-message', async function ({ sessionId, message, attachments, includeScreenContext }) {
-  return service.sendMessage(
-    sessionId,
-    message,
-    attachments,
-    includeScreenContext !== false,
-  );
-});
+app.method(
+  'ai-chat-send-message',
+  async function ({ sessionId, message, attachments, includeScreenContext }) {
+    return service.sendMessage(
+      sessionId,
+      message,
+      attachments,
+      includeScreenContext !== false,
+    );
+  },
+);
 
 app.method('ai-chat-create-session', async function ({ title }) {
   const sessionId = await service.createSession(title);
@@ -46,18 +49,17 @@ app.method('ai-chat-execute-code', async function ({ code, type }) {
   return service.executeCode(code, type);
 });
 
-app.method('ai-chat-save-visualization', async function ({
-  sessionId,
-  messageId,
-  visualization,
-}) {
-  const saved = await service.saveVisualization(
-    sessionId,
-    messageId,
-    visualization,
-  );
-  return { saved };
-});
+app.method(
+  'ai-chat-save-visualization',
+  async function ({ sessionId, messageId, visualization }) {
+    const saved = await service.saveVisualization(
+      sessionId,
+      messageId,
+      visualization,
+    );
+    return { saved };
+  },
+);
 
 app.method('ai-chat-get-budget-context', async function () {
   return service.getBudgetContext();
@@ -82,11 +84,11 @@ app.method('ai-chat-test-provider', async function ({ provider, apiKey }) {
 app.method('ai-chat-check-security', async function () {
   // Check if we're running in Electron (desktop) or web
   const platform = isElectron() ? 'desktop' : 'web';
-  
+
   // On desktop, safeStorage provides secure encryption
   // On web, credentials would be stored in browser preferences (not encrypted by default)
   const isSecure = platform === 'desktop';
-  
+
   return {
     platform: isSecure ? 'Electron safeStorage' : 'Browser Preferences',
     isSecure,

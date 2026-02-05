@@ -26,7 +26,7 @@ export class AIChatService {
   constructor() {
     this.dataProvider = new BudgetDataContextProvider();
     this.codeExecutor = new CodeExecutor();
-    
+
     // Initialize secure credential storage
     credentials.init().catch(err => {
       console.error('Failed to initialize credential storage:', err);
@@ -47,7 +47,7 @@ export class AIChatService {
 
     this.sessions.set(sessionId, session);
     await this.saveSessions();
-    
+
     return sessionId;
   }
 
@@ -132,7 +132,7 @@ export class AIChatService {
     const codeMatch = providerResponse.content.match(
       /```(?:javascript|js|code)\n([\s\S]*?)```/,
     );
-    
+
     let visualizations: Visualization[] | undefined;
     if (codeMatch && codeMatch[1]) {
       try {
@@ -141,7 +141,7 @@ export class AIChatService {
           codeMatch[1],
           budgetContext,
         );
-        
+
         if (execResult.visualization) {
           visualizations = [execResult.visualization];
         }
@@ -200,7 +200,7 @@ export class AIChatService {
     // System context
     contextParts.push(
       'You are an AI assistant integrated into Actual Budget, a personal finance application.',
-      'You have access to the user\'s budget data and can help with financial analysis, budgeting advice, and data visualization.',
+      "You have access to the user's budget data and can help with financial analysis, budgeting advice, and data visualization.",
       'When asked to create visualizations, generate JavaScript code using the createChart() or createTable() functions.',
     );
 
@@ -255,7 +255,7 @@ export class AIChatService {
 
     // Add conversation history (limit to recent messages)
     const recentMessages = messages.slice(-10);
-    
+
     recentMessages.forEach(msg => {
       if (msg.role === 'system') return;
 
@@ -328,14 +328,14 @@ export class AIChatService {
     if (!message) return false;
 
     visualization.savedAt = Date.now();
-    
+
     if (!message.visualizations) {
       message.visualizations = [];
     }
-    
+
     message.visualizations.push(visualization);
     await this.saveSessions();
-    
+
     return true;
   }
 
@@ -370,9 +370,7 @@ export class AIChatService {
     };
   }
 
-  async setPreferences(
-    preferences: Partial<ChatPreferences>,
-  ): Promise<void> {
+  async setPreferences(preferences: Partial<ChatPreferences>): Promise<void> {
     const currentPrefs = await this.getPreferences();
     const updatedPrefs = { ...currentPrefs, ...preferences };
 
@@ -436,8 +434,9 @@ export class AIChatService {
 
   async loadSessions(): Promise<void> {
     const savedPrefs = await prefs.getPrefs();
-    const sessions = ((savedPrefs as any)['ai-chat-sessions'] as ChatSession[]) || [];
-    
+    const sessions =
+      ((savedPrefs as any)['ai-chat-sessions'] as ChatSession[]) || [];
+
     this.sessions.clear();
     sessions.forEach(session => {
       this.sessions.set(session.id, session);

@@ -33,7 +33,10 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
     checkSecurityStatus();
   }, []);
 
-  const modelOptions: Record<AIProvider, Array<{ id: string; label: string }>> = {
+  const modelOptions: Record<
+    AIProvider,
+    Array<{ id: string; label: string }>
+  > = {
     anthropic: [
       { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
       { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
@@ -115,7 +118,8 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         provider,
         apiKey: '',
         enabled: false,
-        defaultModel: provider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4o',
+        defaultModel:
+          provider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4o',
         ...updates,
       };
       setPreferences({
@@ -161,9 +165,8 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
           padding: 15,
           marginBottom: 30,
           borderRadius: 6,
-          backgroundColor:
-            securityStatus?.isSecure ?
-              'rgba(76, 175, 80, 0.1)'
+          backgroundColor: securityStatus?.isSecure
+            ? 'rgba(76, 175, 80, 0.1)'
             : 'rgba(244, 67, 54, 0.1)',
           border: `1px solid ${securityStatus?.isSecure ? '#4CAF50' : '#f44336'}`,
         }}
@@ -175,12 +178,21 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
             marginBottom: 8,
           }}
         >
-          {securityStatus?.isSecure ? '🔒 Secure Storage' : '⚠️ Warning: Plain Text Storage'}
+          {securityStatus?.isSecure
+            ? '🔒 Secure Storage'
+            : '⚠️ Warning: Plain Text Storage'}
         </Text>
-        <Text style={{ fontSize: 13, lineHeight: 1.5, display: 'block', wordWrap: 'break-word' }}>
-          {securityStatus?.isSecure ?
-            `API keys are securely encrypted using ${securityStatus.platform} credential storage.`
-          : `API keys are stored in browser preferences without encryption. For secure encrypted storage, use the desktop application. The web environment does not support secure credential storage at this time.`}
+        <Text
+          style={{
+            fontSize: 13,
+            lineHeight: 1.5,
+            display: 'block',
+            wordWrap: 'break-word',
+          }}
+        >
+          {securityStatus?.isSecure
+            ? `API keys are securely encrypted using ${securityStatus.platform} credential storage.`
+            : `API keys are stored in browser preferences without encryption. For secure encrypted storage, use the desktop application. The web environment does not support secure credential storage at this time.`}
         </Text>
       </View>
 
@@ -215,7 +227,15 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
           </select>
         </View>
 
-        <View style={{ marginBottom: 15, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View
+          style={{
+            marginBottom: 15,
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           <input
             type="checkbox"
             checked={preferences.autoCapture}
@@ -229,7 +249,15 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
           <Text style={{ flexShrink: 1 }}>Auto-capture screen context</Text>
         </View>
 
-        <View style={{ marginBottom: 15, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View
+          style={{
+            marginBottom: 15,
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           <input
             type="checkbox"
             checked={preferences.includeTransactionData}
@@ -288,9 +316,18 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
                 }}
               >
                 <Text style={{ fontSize: 14, fontWeight: 600 }}>
-                  {provider === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (GPT)'}
+                  {provider === 'anthropic'
+                    ? 'Anthropic (Claude)'
+                    : 'OpenAI (GPT)'}
                 </Text>
-                <View style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={config.enabled}
@@ -390,7 +427,9 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
                 disabled={!config.apiKey || testingProvider === provider}
                 variant="normal"
               >
-                {testingProvider === provider ? 'Testing...' : 'Test Connection'}
+                {testingProvider === provider
+                  ? 'Testing...'
+                  : 'Test Connection'}
               </Button>
             </View>
           );
