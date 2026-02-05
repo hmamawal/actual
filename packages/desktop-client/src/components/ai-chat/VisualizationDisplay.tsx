@@ -2,11 +2,11 @@
 import React from 'react';
 
 import { theme } from '@actual-app/components/theme';
-import type { Visualization } from 'loot-core/src/types/models/ai-chat';
+import type { Visualization } from 'loot-core/types/models';
 
-import { View } from '@desktop-client/components/common/View';
-import { Text } from '@desktop-client/components/common/Text';
-import { Button } from '@desktop-client/components/common/Button2';
+import { View } from '@actual-app/components/view';
+import { Text } from '@actual-app/components/text';
+import { Button } from '@actual-app/components/button';
 
 type VisualizationDisplayProps = {
   visualization: Visualization;

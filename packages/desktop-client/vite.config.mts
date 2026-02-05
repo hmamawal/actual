@@ -177,12 +177,6 @@ export default defineConfig(async ({ mode }) => {
       injectShims(),
       addWatchers(),
       react({
-        plugins: [
-          [
-            '@swc/plugin-react-remove-properties',
-            { properties: ['^data-debug'] },
-          ],
-        ],
         devTarget: 'es2022',
       }),
       viteTsconfigPaths({ root: '../..' }),

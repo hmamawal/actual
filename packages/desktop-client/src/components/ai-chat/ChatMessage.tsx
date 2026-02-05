@@ -4,10 +4,10 @@ import React from 'react';
 import { css } from '@emotion/css';
 
 import { theme } from '@actual-app/components/theme';
-import type { ChatMessage } from 'loot-core/src/types/models/ai-chat';
+import type { ChatMessage } from 'loot-core/types/models';
 
-import { View } from '@desktop-client/components/common/View';
-import { Text } from '@desktop-client/components/common/Text';
+import { View } from '@actual-app/components/view';
+import { Text } from '@actual-app/components/text';
 
 import { VisualizationDisplay } from './VisualizationDisplay';
 

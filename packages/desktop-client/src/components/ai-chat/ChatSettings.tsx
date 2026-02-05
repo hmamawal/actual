@@ -2,17 +2,17 @@
 import React, { useState, useEffect } from 'react';
 
 import { theme } from '@actual-app/components/theme';
-import { send } from 'loot-core/src/platform/client/fetch';
+import { send } from 'loot-core/platform/client/fetch';
 import type {
   ChatPreferences,
   AIProvider,
   AIProviderConfig,
-} from 'loot-core/src/types/models/ai-chat';
+} from 'loot-core/types/models';
 
-import { Button } from '@desktop-client/components/common/Button2';
-import { Input } from '@desktop-client/components/common/Input';
-import { View } from '@desktop-client/components/common/View';
-import { Text } from '@desktop-client/components/common/Text';
+import { Button } from '@actual-app/components/button';
+import { Input } from '@actual-app/components/input';
+import { View } from '@actual-app/components/view';
+import { Text } from '@actual-app/components/text';
 
 type ChatSettingsProps = {
   onClose: () => void;
@@ -32,6 +32,21 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
     loadPreferences();
     checkSecurityStatus();
   }, []);
+
+  const modelOptions: Record<AIProvider, Array<{ id: string; label: string }>> = {
+    anthropic: [
+      { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+    ],
+    openai: [
+      { id: 'gpt-4o', label: 'GPT-4o' },
+      { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    ],
+    local: [],
+  };
+
+  const fallbackModelFor = (provider: AIProvider) =>
+    provider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4o';
 
   const checkSecurityStatus = async () => {
     try {
@@ -159,10 +174,10 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
         >
           {securityStatus?.isSecure ? '🔒 Secure Storage' : '⚠️ Warning: Plain Text Storage'}
         </Text>
-        <Text style={{ fontSize: 13, lineHeight: 1.5 }}>
+        <Text style={{ fontSize: 13, lineHeight: 1.5, display: 'block' }}>
           {securityStatus?.isSecure ?
             `API keys are securely encrypted using ${securityStatus.platform} credential storage.`
-          : `API keys are currently stored in plain text. This is a security risk. Your API keys should be re-entered to use secure storage.`}
+          : `API keys are stored in browser preferences in this environment. For encrypted storage, use the desktop app or enable secure storage.`}
         </Text>
       </View>
 
@@ -183,6 +198,7 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
               })
             }
             style={{
+              width: '100%',
               padding: 8,
               borderRadius: 4,
               border: `1px solid ${theme.pillBorder}`,
@@ -196,36 +212,34 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
           </select>
         </View>
 
-        <View style={{ marginBottom: 15 }}>
-          <label>
-            <input
-              type="checkbox"
-              checked={preferences.autoCapture}
-              onChange={e =>
-                setPreferences({
-                  ...preferences,
-                  autoCapture: e.target.checked,
-                })
-              }
-            />
-            <Text style={{ marginLeft: 8 }}>Auto-capture screen context</Text>
-          </label>
+        <View style={{ marginBottom: 15, display: 'flex', alignItems: 'center' }}>
+          <input
+            type="checkbox"
+            checked={preferences.autoCapture}
+            onChange={e =>
+              setPreferences({
+                ...preferences,
+                autoCapture: e.target.checked,
+              })
+            }
+          />
+          <Text style={{ marginLeft: 8 }}>Auto-capture screen context</Text>
         </View>
 
-        <View style={{ marginBottom: 15 }}>
-          <label>
-            <input
-              type="checkbox"
-              checked={preferences.includeTransactionData}
-              onChange={e =>
-                setPreferences({
-                  ...preferences,
-                  includeTransactionData: e.target.checked,
-                })
-              }
-            />
-            <Text style={{ marginLeft: 8 }}>Include transaction data in context</Text>
-          </label>
+        <View style={{ marginBottom: 15, display: 'flex', alignItems: 'center' }}>
+          <input
+            type="checkbox"
+            checked={preferences.includeTransactionData}
+            onChange={e =>
+              setPreferences({
+                ...preferences,
+                includeTransactionData: e.target.checked,
+              })
+            }
+          />
+          <Text style={{ marginLeft: 8 }}>
+            Include transaction data in context
+          </Text>
         </View>
       </View>
 
@@ -244,6 +258,11 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
               enabled: false,
               defaultModel: '',
             } as AIProviderConfig);
+
+          const providerId = provider as AIProvider;
+          const availableModels = modelOptions[providerId] || [];
+          const fallbackModel = fallbackModelFor(providerId);
+          const selectedModel = config.defaultModel || fallbackModel;
 
           return (
             <View
@@ -266,51 +285,103 @@ export function ChatSettings({ onClose }: ChatSettingsProps) {
                 <Text style={{ fontSize: 14, fontWeight: 600 }}>
                   {provider === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI (GPT)'}
                 </Text>
-                <label>
+                <View style={{ display: 'flex', alignItems: 'center' }}>
                   <input
                     type="checkbox"
                     checked={config.enabled}
                     onChange={e =>
-                      updateProvider(provider as AIProvider, {
+                      updateProvider(providerId, {
                         enabled: e.target.checked,
                       })
                     }
                   />
-                  <Text style={{ marginLeft: 5 }}>Enabled</Text>
-                </label>
+                  <Text style={{ marginLeft: 6 }}>Enabled</Text>
+                </View>
               </View>
 
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ marginBottom: 5, fontSize: 12 }}>API Key</Text>
+              <View
+                style={{
+                  marginBottom: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, display: 'block' }}>API Key</Text>
                 <Input
                   type="password"
                   value={config.apiKey}
                   onChange={e =>
-                    updateProvider(provider as AIProvider, {
+                    updateProvider(providerId, {
                       apiKey: e.target.value,
                     })
                   }
                   placeholder="Enter API key"
+                  style={{ width: '100%' }}
                 />
               </View>
 
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ marginBottom: 5, fontSize: 12 }}>
+              <View
+                style={{
+                  marginBottom: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, display: 'block' }}>Model</Text>
+                <View style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {availableModels.map(model => (
+                    <Button
+                      key={model.id}
+                      variant={
+                        selectedModel === model.id ? 'menuSelected' : 'menu'
+                      }
+                      onClick={() =>
+                        updateProvider(providerId, { defaultModel: model.id })
+                      }
+                    >
+                      {model.label}
+                    </Button>
+                  ))}
+                </View>
+                <Input
+                  value={config.defaultModel}
+                  onChange={e =>
+                    updateProvider(providerId, {
+                      defaultModel: e.target.value,
+                    })
+                  }
+                  placeholder={`Custom model ID (${fallbackModel})`}
+                  style={{ width: '100%' }}
+                />
+              </View>
+
+              <View
+                style={{
+                  marginBottom: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, display: 'block' }}>
                   Base URL (optional)
                 </Text>
                 <Input
                   value={config.baseUrl || ''}
                   onChange={e =>
-                    updateProvider(provider as AIProvider, {
+                    updateProvider(providerId, {
                       baseUrl: e.target.value,
                     })
                   }
                   placeholder="Leave empty for default"
+                  style={{ width: '100%' }}
                 />
               </View>
 
               <Button
-                onClick={() => testProvider(provider as AIProvider)}
+                onClick={() => testProvider(providerId)}
                 disabled={!config.apiKey || testingProvider === provider}
                 variant="normal"
               >

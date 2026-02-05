@@ -91,10 +91,18 @@ export class AIChatService {
 
     // Get preferences and provider
     const preferences = await this.getPreferences();
-    const provider = this.getProvider(preferences);
+    const providerConfig = preferences.providers.find(
+      p => p.provider === preferences.defaultProvider,
+    );
+
+    if (!providerConfig || !providerConfig.enabled) {
+      throw new Error('No AI provider configured');
+    }
+
+    const provider = ProviderFactory.createProvider(providerConfig);
 
     if (!provider) {
-      throw new Error('No AI provider configured');
+      throw new Error('Missing or invalid API key for provider');
     }
 
     // Build context
@@ -114,6 +122,7 @@ export class AIChatService {
     // Send to AI provider
     const startTime = Date.now();
     const providerResponse = await provider.sendMessage(providerMessages, {
+      model: providerConfig.defaultModel || undefined,
       maxTokens: 4096,
       temperature: 0.7,
     });
@@ -367,19 +376,33 @@ export class AIChatService {
     const currentPrefs = await this.getPreferences();
     const updatedPrefs = { ...currentPrefs, ...preferences };
 
-    // Extract and store API keys securely
+    // Extract and store API keys securely when possible.
     if (updatedPrefs.providers) {
+      const providersWithStorage = [] as ChatPreferences['providers'];
+
       for (const provider of updatedPrefs.providers) {
+        const nextProvider = { ...provider };
+
         if (provider.apiKey) {
-          // Store in secure credential storage
-          await credentials.setCredential(
-            `ai-chat-${provider.provider}`,
-            provider.apiKey,
-          );
-          // Remove from preferences object (don't store in plain text)
-          provider.apiKey = '';
+          try {
+            await credentials.setCredential(
+              `ai-chat-${provider.provider}`,
+              provider.apiKey,
+            );
+            // Remove from preferences object (don't store in plain text)
+            nextProvider.apiKey = '';
+          } catch (error) {
+            console.warn(
+              'Secure credential storage unavailable; storing API key in preferences.',
+              error,
+            );
+          }
         }
+
+        providersWithStorage.push(nextProvider);
       }
+
+      updatedPrefs.providers = providersWithStorage;
     }
 
     await prefs.savePrefs({ 'ai-chat': updatedPrefs } as any);

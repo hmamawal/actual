@@ -1,7 +1,6 @@
 // @ts-strict-ignore
-import { runQuery as aqlQuery } from '../aql';
+import { aqlQuery } from '../aql';
 import * as db from '../db';
-import { getCategories } from '../budget/categories';
 import { getPayees } from '../payees/app';
 import * as monthUtils from '../../shared/months';
 
@@ -39,8 +38,7 @@ export class BudgetDataContextProvider {
   }
 
   private async getCategories() {
-    const categories = await getCategories();
-    const groups = categories.grouped || [];
+    const groups = await db.getCategoriesGrouped();
 
     return groups.flatMap(group =>
       group.categories.map(cat => ({
@@ -48,8 +46,8 @@ export class BudgetDataContextProvider {
         name: cat.name,
         groupId: group.id,
         groupName: group.name,
-        isIncome: cat.is_income,
-        hidden: cat.hidden,
+        isIncome: cat.is_income === 1,
+        hidden: cat.hidden === 1,
       })),
     );
   }

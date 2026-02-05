@@ -4,17 +4,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { css } from '@emotion/css';
 
 import { theme } from '@actual-app/components/theme';
-import { send } from 'loot-core/src/platform/client/fetch';
+import { send } from 'loot-core/platform/client/fetch';
 import type {
+  ChatPreferences,
   ChatSession,
   ChatMessage,
   MessageAttachment,
-} from 'loot-core/src/types/models/ai-chat';
+} from 'loot-core/types/models';
 
-import { Button } from '@desktop-client/components/common/Button2';
-import { Input } from '@desktop-client/components/common/Input';
-import { View } from '@desktop-client/components/common/View';
-import { Text } from '@desktop-client/components/common/Text';
+import { Button } from '@actual-app/components/button';
+import { Input } from '@actual-app/components/input';
+import { View } from '@actual-app/components/view';
+import { Text } from '@actual-app/components/text';
 
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatSessionList } from './ChatSessionList';
@@ -27,11 +28,21 @@ export function AIChatPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
+  const [preferences, setPreferences] = useState<ChatPreferences | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadSessions();
+    loadPreferences();
   }, []);
+
+  useEffect(() => {
+    if (!showSettings) {
+      loadPreferences();
+    }
+  }, [showSettings]);
 
   useEffect(() => {
     scrollToBottom();
@@ -40,13 +51,19 @@ export function AIChatPanel() {
   const loadSessions = async () => {
     const loadedSessions = await send('ai-chat-list-sessions');
     setSessions(loadedSessions);
-    
+
     if (loadedSessions.length > 0 && !currentSession) {
       const session = await send('ai-chat-get-session', {
         sessionId: loadedSessions[0].id,
       });
       setCurrentSession(session);
     }
+  };
+
+  const loadPreferences = async () => {
+    const prefs = await send('ai-chat-get-preferences');
+    setPreferences(prefs);
+    return prefs as ChatPreferences;
   };
 
   const createNewSession = async () => {
@@ -61,6 +78,23 @@ export function AIChatPanel() {
 
   const sendMessage = async () => {
     if (!message.trim() || !currentSession || isLoading) return;
+
+    setErrorMessage(null);
+
+    const latestPrefs = preferences || (await loadPreferences());
+    const providerConfig = latestPrefs?.providers.find(
+      p => p.provider === latestPrefs.defaultProvider,
+    );
+
+    if (!providerConfig || !providerConfig.enabled) {
+      setErrorMessage('Enable an AI provider in Settings to send messages.');
+      return;
+    }
+
+    if (!providerConfig.apiKey) {
+      setErrorMessage('Add an API key for the selected provider in Settings.');
+      return;
+    }
 
     setIsLoading(true);
     const userMessage = message;
@@ -81,8 +115,11 @@ export function AIChatPanel() {
       setCurrentSession(updatedSession);
       setAttachments([]);
     } catch (error) {
+      const messageText =
+        error instanceof Error ? error.message : 'Failed to send message.';
       console.error('Failed to send message:', error);
-      // Show error notification
+      setErrorMessage(messageText);
+      setMessage(userMessage);
     } finally {
       setIsLoading(false);
     }
@@ -245,6 +282,28 @@ export function AIChatPanel() {
                 borderTop: `1px solid ${theme.pillBorder}`,
               }}
             >
+              {errorMessage && (
+                <View
+                  style={{
+                    marginBottom: 10,
+                    padding: 10,
+                    borderRadius: 6,
+                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                    border: '1px solid #f44336',
+                  }}
+                >
+                  <Text style={{ color: '#c62828', fontSize: 13 }}>
+                    {errorMessage}
+                  </Text>
+                  <Button
+                    variant="bare"
+                    onClick={() => setShowSettings(true)}
+                    style={{ marginTop: 6 }}
+                  >
+                    Open settings
+                  </Button>
+                </View>
+              )}
               {attachments.length > 0 && (
                 <View style={{ marginBottom: 10 }}>
                   {attachments.map(att => (
@@ -277,23 +336,32 @@ export function AIChatPanel() {
                 <Input
                   placeholder="Ask about your budget..."
                   value={message}
-                  onChange={e => setMessage(e.target.value)}
+                  onChange={e => {
+                    setMessage(e.target.value);
+                    if (errorMessage) {
+                      setErrorMessage(null);
+                    }
+                  }}
                   onKeyPress={handleKeyPress}
                   disabled={isLoading}
                   style={{ flex: 1 }}
                 />
-                <label>
-                  <Button variant="bare" disabled={isLoading}>
-                    📎
-                  </Button>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                <Button
+                  variant="bare"
+                  disabled={isLoading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  📎
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                  disabled={isLoading}
+                />
                 <Button
                   onClick={sendMessage}
                   variant="primary"

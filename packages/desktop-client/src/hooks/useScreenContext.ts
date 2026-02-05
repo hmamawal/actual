@@ -2,8 +2,8 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { send } from 'loot-core/src/platform/client/fetch';
-import type { ScreenContext } from 'loot-core/src/types/models/ai-chat';
+import { send } from 'loot-core/platform/client/fetch';
+import type { ScreenContext } from 'loot-core/types/models';
 
 import { useAccounts } from './useAccounts';
 

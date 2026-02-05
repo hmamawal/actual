@@ -2,11 +2,11 @@
 import React from 'react';
 
 import { theme } from '@actual-app/components/theme';
-import type { ChatSession } from 'loot-core/src/types/models/ai-chat';
+import type { ChatSession } from 'loot-core/types/models';
 
-import { Button } from '@desktop-client/components/common/Button2';
-import { View } from '@desktop-client/components/common/View';
-import { Text } from '@desktop-client/components/common/Text';
+import { Button } from '@actual-app/components/button';
+import { View } from '@actual-app/components/view';
+import { Text } from '@actual-app/components/text';
 
 type ChatSessionListProps = {
   sessions: ChatSession[];
