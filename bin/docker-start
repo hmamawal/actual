@@ -5,9 +5,24 @@
 # to check if the node_modules folder is empty and
 # if so, run yarn to install the dependencies.
 #####################################################
+# NOTE: This file must use LF line endings.
+
+if [ ! -d "node_modules" ] || [ "$(ls -A node_modules)" = "" ]; then
+    corepack enable
+    yarn install
+fi
+
+BROWSER=0 yarn start:browser#!/bin/sh
+
+#####################################################
+# This startup script is used by the docker container
+# to check if the node_modules folder is empty and
+# if so, run yarn to install the dependencies.
+#####################################################
+# NOTE: This file must use LF line endings.
 
 if [ ! -d "node_modules" ] || [ "$(ls -A node_modules)" = "" ]; then
     yarn
 fi
 
-BROWSER=0 yarn start:browser
+BROWSER=0 yarn start:browser#!/bin/sh\n\n#####################################################\n# This startup script is used by the docker container\n# to check if the node_modules folder is empty and\n# if so, run yarn to install the dependencies.\n#####################################################\n\nif [ ! -d "node_modules" ] || [ "$(ls -A node_modules)" = "" ]; then\n    yarn\nfi\n\nBROWSER=0 yarn start:browser\n

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
 import {
+  SvgChatBubbleDots,
   SvgCheveronDown,
   SvgCheveronRight,
   SvgCog,
@@ -34,6 +35,7 @@ export function PrimaryButtons() {
     '/payees',
     '/rules',
     '/bank-sync',
+    '/ai-chat',
     '/settings',
     '/tools',
   ].some(route => location.pathname.startsWith(route));
@@ -58,6 +60,12 @@ export function PrimaryButtons() {
       />
       {isOpen && (
         <>
+          <SecondaryItem
+            title={t('AI Chat')}
+            Icon={SvgChatBubbleDots}
+            to="/ai-chat"
+            indent={15}
+          />
           <SecondaryItem
             title={t('Payees')}
             Icon={SvgStoreFront}

@@ -10,6 +10,7 @@ import { View } from '@actual-app/components/view';
 import * as undo from 'loot-core/platform/client/undo';
 
 import { UserAccessPage } from './admin/UserAccess/UserAccessPage';
+import { AIChatPanel } from './ai-chat/AIChatPanel';
 import { BankSync } from './banksync';
 import { BankSyncStatus } from './BankSyncStatus';
 import { CommandBar } from './CommandBar';
@@ -261,6 +262,7 @@ export function FinancesApp() {
                   element={<NarrowAlternate name="Rules" />}
                 />
                 <Route path="/bank-sync" element={<BankSync />} />
+                <Route path="/ai-chat" element={<AIChatPanel />} />
                 <Route path="/tags" element={<ManageTagsPage />} />
                 <Route path="/settings" element={<Settings />} />
 

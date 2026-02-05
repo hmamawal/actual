@@ -12,6 +12,7 @@ import { Handlers } from '../types/handlers';
 
 import { app as accountsApp } from './accounts/app';
 import { app as adminApp } from './admin/app';
+import { app as aiChatApp } from './ai-chat/app';
 import { installAPI } from './api';
 import { aqlQuery } from './aql';
 import { app as authApp } from './auth/app';
@@ -131,6 +132,7 @@ injectAPI.override((name, args) => runHandler(app.handlers[name], args));
 app.handlers = handlers;
 app.combine(
   authApp,
+  aiChatApp,
   schedulesApp,
   budgetApp,
   dashboardApp,

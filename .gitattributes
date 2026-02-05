@@ -11,6 +11,7 @@
 *.ts text eol=lf
 *.sh text eol=lf
 *.tsx text eol=lf
+bin/docker-start text eol=lf
 
 yarn.lock text eol=lf
 

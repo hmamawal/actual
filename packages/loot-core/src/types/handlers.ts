@@ -18,12 +18,14 @@ import type { TagsHandlers } from '../server/tags/app';
 import type { ToolsHandlers } from '../server/tools/app';
 import type { TransactionHandlers } from '../server/transactions/app';
 
+import type { AIChatHandlers } from './handlers/ai-chat-handlers';
 import type { ApiHandlers } from './api-handlers';
 import type { ServerHandlers } from './server-handlers';
 
 export interface Handlers
   extends ServerHandlers,
     ApiHandlers,
+    AIChatHandlers,
     BudgetHandlers,
     DashboardHandlers,
     FiltersHandlers,
