@@ -108,7 +108,7 @@ export default defineConfig(async ({ mode }) => {
 
   return {
     base: '/',
-    envPrefix: 'REACT_APP_',
+    envPrefix: ['REACT_APP_', 'VITE_'],
     build: {
       terserOptions: {
         compress: false,

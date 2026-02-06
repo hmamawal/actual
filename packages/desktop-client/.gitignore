@@ -35,3 +35,4 @@ locale/
 
 # service worker build output
 dev-dist
+*.env.local

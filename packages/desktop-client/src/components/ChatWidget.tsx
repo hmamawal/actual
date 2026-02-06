@@ -1,9 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { Trans } from 'react-i18next';
 
-
-import { styles } from '@actual-app/components/styles';
-import { View } from '@actual-app/components/view';
+import {
+  sendChatMessage,
+  type ChatMessage,
+} from '@desktop-client/services/openaiService';
 
 type Message = {
   id: string;
@@ -17,7 +24,11 @@ export function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
@@ -27,7 +38,7 @@ export function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (inputValue.trim() === '') return;
 
     // Add user message
@@ -38,29 +49,57 @@ export function ChatWidget() {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInputValue('');
+    setIsLoading(true);
+    setError(null);
 
-    // Simulate bot response after a short delay
-    setTimeout(() => {
+    try {
+      // Convert messages to OpenAI format
+      const chatMessages: ChatMessage[] = newMessages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.content,
+      }));
+
+      // Get response from OpenAI
+      const response = await sendChatMessage(chatMessages);
+
       const botMessage: Message = {
         id: `msg-${Date.now()}-bot`,
-        content: 'test working',
+        content: response,
         sender: 'bot',
         timestamp: new Date(),
       };
+
       setMessages(prev => [...prev, botMessage]);
-    }, 300);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to get response from AI';
+      setError(errorMessage);
+      console.error('Chat error:', err);
+
+      // Add error message to chat
+      const errorBot: Message = {
+        id: `msg-${Date.now()}-error`,
+        content: `Error: ${errorMessage}`,
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorBot]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: MouseEvent) => {
     if (chatBoxRef.current && chatBoxRef.current.contains(e.target as Node)) {
       const header = chatBoxRef.current.querySelector('div');
       // Only allow dragging from the header
@@ -283,53 +322,81 @@ export function ChatWidget() {
               padding: '12px',
               borderTop: '1px solid #e5e7eb',
               display: 'flex',
+              flexDirection: 'column',
               gap: '8px',
               backgroundColor: 'white',
               borderBottomLeftRadius: '16px',
               borderBottomRightRadius: '16px',
             }}
           >
-            <textarea
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              style={{
-                flex: 1,
-                padding: '10px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontFamily:
-                  '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                resize: 'none',
-                maxHeight: '80px',
-              }}
-              rows={1}
-            />
-            <button
-              onClick={handleSendMessage}
-              type="button"
-              style={{
-                padding: '10px 16px',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                transition: 'background-color 0.2s',
-                flexShrink: 0,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = '#1d4ed8';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = '#2563eb';
-              }}
-            ><Trans>
-              Send
-            </Trans></button>
+            {error && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#fee2e2',
+                  color: '#991b1b',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  lineHeight: '1.4',
+                }}
+              >
+                {error}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <textarea
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={
+                  isLoading ? 'Waiting for response...' : 'Type your message...'
+                }
+                disabled={isLoading}
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily:
+                    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  resize: 'none',
+                  maxHeight: '80px',
+                  opacity: isLoading ? 0.6 : 1,
+                  cursor: isLoading ? 'not-allowed' : 'text',
+                }}
+                rows={1}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={isLoading}
+                type="button"
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: isLoading ? '#9ca3af' : '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '16px',
+                  transition: 'background-color 0.2s',
+                  flexShrink: 0,
+                  opacity: isLoading ? 0.7 : 1,
+                }}
+                onMouseEnter={e => {
+                  if (!isLoading) {
+                    e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isLoading) {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                  }
+                }}
+              >
+                {isLoading ? '...' : <Trans>Send</Trans>}
+              </button>
+            </div>
           </div>
         </div>
       )}

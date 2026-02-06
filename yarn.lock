@@ -184,6 +184,7 @@ __metadata:
     loot-core: "workspace:*"
     mdast-util-newline-to-break: "npm:^2.0.0"
     memoize-one: "npm:^6.0.0"
+    openai: "npm:^6.18.0"
     pikaday: "npm:1.8.2"
     promise-retry: "npm:^2.0.1"
     prop-types: "npm:^15.8.1"
@@ -21388,6 +21389,23 @@ __metadata:
     is-docker: "npm:^2.1.1"
     is-wsl: "npm:^2.2.0"
   checksum: 10/acd81a1d19879c818acb3af2d2e8e9d81d17b5367561e623248133deb7dd3aefaed527531df2677d3e6aaf0199f84df57b6b2262babff8bf46ea0029aac536c9
+  languageName: node
+  linkType: hard
+
+"openai@npm:^6.18.0":
+  version: 6.18.0
+  resolution: "openai@npm:6.18.0"
+  peerDependencies:
+    ws: ^8.18.0
+    zod: ^3.25 || ^4.0
+  peerDependenciesMeta:
+    ws:
+      optional: true
+    zod:
+      optional: true
+  bin:
+    openai: bin/cli
+  checksum: 10/e83c7c8e3d8302335448569996bb76eb694389f406b367574d4db11dc0058588b0112067278afbe6ab91f1022e23cddc3824571d2a85e098971010aabe599006
   languageName: node
   linkType: hard
 
