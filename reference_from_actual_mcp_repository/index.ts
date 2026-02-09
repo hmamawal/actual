@@ -1,13 +1,19 @@
 // Orchestrator for get-transactions tool
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { GetTransactionsInputParser } from './input-parser.js';
-import { GetTransactionsDataFetcher } from './data-fetcher.js';
-import { GetTransactionsMapper } from './transaction-mapper.js';
-import { GetTransactionsReportGenerator } from './report-generator.js';
-import { success, errorFromCatch } from '../../utils/response.js';
-import { getDateRange } from '../../utils.js';
-import { GetTransactionsArgsSchema, type GetTransactionsArgs, type ToolInput } from '../../types.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+
+import {
+  GetTransactionsArgsSchema,
+  type GetTransactionsArgs,
+  type ToolInput,
+} from '../../types.js';
+import { getDateRange } from '../../utils.js';
+import { success, errorFromCatch } from '../../utils/response.js';
+
+import { GetTransactionsDataFetcher } from './data-fetcher.js';
+import { GetTransactionsInputParser } from './input-parser.js';
+import { GetTransactionsReportGenerator } from './report-generator.js';
+import { GetTransactionsMapper } from './transaction-mapper.js';
 
 export const schema = {
   name: 'get-transactions',
@@ -15,29 +21,48 @@ export const schema = {
   inputSchema: zodToJsonSchema(GetTransactionsArgsSchema) as ToolInput,
 };
 
-export async function handler(args: GetTransactionsArgs): Promise<CallToolResult> {
+export async function handler(
+  args: GetTransactionsArgs,
+): Promise<CallToolResult> {
   try {
     const input = new GetTransactionsInputParser().parse(args);
-    const { accountId, startDate, endDate, minAmount, maxAmount, categoryName, payeeName, limit } = input;
+    const {
+      accountId,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount,
+      categoryName,
+      payeeName,
+      limit,
+    } = input;
     const { startDate: start, endDate: end } = getDateRange(startDate, endDate);
 
     // Fetch transactions
-    const transactions = await new GetTransactionsDataFetcher().fetch(accountId, start, end);
+    const transactions = await new GetTransactionsDataFetcher().fetch(
+      accountId,
+      start,
+      end,
+    );
     let filtered = [...transactions];
 
     if (minAmount !== undefined) {
-      filtered = filtered.filter((t) => t.amount >= minAmount * 100);
+      filtered = filtered.filter(t => t.amount >= minAmount * 100);
     }
     if (maxAmount !== undefined) {
-      filtered = filtered.filter((t) => t.amount <= maxAmount * 100);
+      filtered = filtered.filter(t => t.amount <= maxAmount * 100);
     }
     if (categoryName) {
       const lowerCategory = categoryName.toLowerCase();
-      filtered = filtered.filter((t) => (t.category_name || '').toLowerCase().includes(lowerCategory));
+      filtered = filtered.filter(t =>
+        (t.category_name || '').toLowerCase().includes(lowerCategory),
+      );
     }
     if (payeeName) {
       const lowerPayee = payeeName.toLowerCase();
-      filtered = filtered.filter((t) => (t.payee_name || '').toLowerCase().includes(lowerPayee));
+      filtered = filtered.filter(t =>
+        (t.payee_name || '').toLowerCase().includes(lowerPayee),
+      );
     }
     if (limit && filtered.length > limit) {
       filtered = filtered.slice(0, limit);
@@ -61,7 +86,7 @@ export async function handler(args: GetTransactionsArgs): Promise<CallToolResult
       mapped,
       filterDescription,
       filtered.length,
-      transactions.length
+      transactions.length,
     );
     return success(markdown);
   } catch (err) {

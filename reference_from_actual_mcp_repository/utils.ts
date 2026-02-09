@@ -1,7 +1,10 @@
 /**
  * Get date range parameters with defaults
  */
-export function getDateRange(startDate?: string, endDate?: string): { startDate: string; endDate: string } {
+export function getDateRange(
+  startDate?: string,
+  endDate?: string,
+): { startDate: string; endDate: string } {
   const today = new Date();
   const defaultStartDate = new Date();
   defaultStartDate.setMonth(today.getMonth() - 3); // 3 months ago by default

@@ -59,7 +59,7 @@ AI understands the budget and answers accordingly
    - Converts cents to dollars for readability
    - Groups categories by category group
    - Creates human-readable summary
-   - Injects as system message  
+   - Injects as system message
 
 3. **Widget**: `ChatWidget` integrates context
    - Gets budget context on each message
@@ -93,6 +93,7 @@ You are helping the user manage their personal finances with this budget data...
 ## 🔒 Privacy & Security
 
 ✅ **Budget data stays secure:**
+
 - Data is never stored - only sent in your current conversation
 - All communication is encrypted to OpenAI servers
 - Data is not used to train models (if using standard API)
@@ -160,6 +161,7 @@ Current Budget Context:
 ## 📈 Future Enhancements
 
 The architecture supports:
+
 - 📝 Recent transaction summaries
 - 💰 Category spending analytics
 - 📊 Budget vs. actual comparisons
@@ -187,22 +189,25 @@ A: No. The AI has read-only access to your data and cannot make changes.
 ## 📞 Troubleshooting
 
 **Budget context not showing up?**
+
 - Check browser console for errors (F12)
 - Verify budget file is loaded
 - Try refreshing the page
 
 **AI doesn't mention budget data?**
+
 - Make sure you're asking budget-related questions
 - Try: "Tell me about my accounts"
 - Check that accounts/categories are set up in your budget
 
 **Want to disable it?**
+
 - Temporarily comment out the `buildChatMessagesWithBudgetContext` call in ChatWidget
 - Or set budget context to empty in the hook
 
 ## 🎓 Learn More
 
 - [ChatWidget Component](packages/desktop-client/src/components/ChatWidget.tsx)
-- [useBudgetContext Hook](packages/desktop-client/src/hooks/useBudgetContext.ts)  
+- [useBudgetContext Hook](packages/desktop-client/src/hooks/useBudgetContext.ts)
 - [Budget Context Service](packages/desktop-client/src/services/budgetContextService.ts)
 - [Main Setup Guide](AI_CHAT_SETUP.md)

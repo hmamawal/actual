@@ -1,9 +1,11 @@
+import { TransactionEntity } from '@actual-app/api/@types/loot-core/src/types/models/transaction.js';
+
 import { getTransactions } from '../../actual-api.js';
-import { fetchAllPayees } from './fetch-payees.js';
-import { fetchAllCategories } from './fetch-categories.js';
 import { GroupAggregator } from '../aggregation/group-by.js';
 import type { Account, Transaction, Payee, Category } from '../types/domain.js';
-import { TransactionEntity } from '@actual-app/api/@types/loot-core/src/types/models/transaction.js';
+
+import { fetchAllCategories } from './fetch-categories.js';
+import { fetchAllPayees } from './fetch-payees.js';
 
 const groupAggregator = new GroupAggregator();
 
@@ -17,26 +19,40 @@ interface TransactionLookups {
   categoriesById: Record<string, Category>;
 }
 
-async function _buildTransactionLookups(options: TransactionLookupOptions): Promise<TransactionLookups> {
+async function _buildTransactionLookups(
+  options: TransactionLookupOptions,
+): Promise<TransactionLookups> {
   const [payees, categories] = await Promise.all([
     options.includePayees ? fetchAllPayees() : Promise.resolve<Payee[]>([]),
-    options.includeCategories ? fetchAllCategories() : Promise.resolve<Category[]>([]),
+    options.includeCategories
+      ? fetchAllCategories()
+      : Promise.resolve<Category[]>([]),
   ]);
 
-  const payeesById: Record<string, Payee> = options.includePayees ? groupAggregator.byId(payees) : {};
-  const categoriesById: Record<string, Category> = options.includeCategories ? groupAggregator.byId(categories) : {};
+  const payeesById: Record<string, Payee> = options.includePayees
+    ? groupAggregator.byId(payees)
+    : {};
+  const categoriesById: Record<string, Category> = options.includeCategories
+    ? groupAggregator.byId(categories)
+    : {};
 
   return { payeesById, categoriesById };
 }
 
-async function _enrichTransactions(transactions: TransactionEntity[]): Promise<Transaction[]> {
+async function _enrichTransactions(
+  transactions: TransactionEntity[],
+): Promise<Transaction[]> {
   if (transactions.length === 0) {
     return transactions;
   }
 
   // # Reason: Only fetch lookup tables when transactions are missing names to avoid redundant API calls.
-  const needsPayees = transactions.some((transaction) => Boolean(transaction.payee));
-  const needsCategories = transactions.some((transaction) => Boolean(transaction.category));
+  const needsPayees = transactions.some(transaction =>
+    Boolean(transaction.payee),
+  );
+  const needsCategories = transactions.some(transaction =>
+    Boolean(transaction.category),
+  );
 
   if (!needsPayees && !needsCategories) {
     return transactions;
@@ -48,9 +64,14 @@ async function _enrichTransactions(transactions: TransactionEntity[]): Promise<T
   });
 
   return transactions.map((transaction: TransactionEntity) => {
-    const payeeName = needsPayees && transaction.payee ? payeesById[transaction.payee]?.name : undefined;
+    const payeeName =
+      needsPayees && transaction.payee
+        ? payeesById[transaction.payee]?.name
+        : undefined;
     const categoryName =
-      needsCategories && transaction.category ? categoriesById[transaction.category]?.name : undefined;
+      needsCategories && transaction.category
+        ? categoriesById[transaction.category]?.name
+        : undefined;
 
     const enriched: Transaction = { ...transaction };
 
@@ -69,7 +90,7 @@ async function _enrichTransactions(transactions: TransactionEntity[]): Promise<T
 export async function fetchTransactionsForAccount(
   accountId: string,
   start: string,
-  end: string
+  end: string,
 ): Promise<Transaction[]> {
   const transactions = await getTransactions(accountId, start, end);
   return _enrichTransactions(transactions);
@@ -78,10 +99,10 @@ export async function fetchTransactionsForAccount(
 export async function fetchAllOnBudgetTransactions(
   accounts: Account[],
   start: string,
-  end: string
+  end: string,
 ): Promise<Transaction[]> {
   let transactions: Transaction[] = [];
-  const onBudgetAccounts = accounts.filter((a) => !a.offbudget && !a.closed);
+  const onBudgetAccounts = accounts.filter(a => !a.offbudget && !a.closed);
   for (const account of onBudgetAccounts) {
     const tx = await getTransactions(account.id, start, end);
     transactions = [...transactions, ...tx];
@@ -89,7 +110,11 @@ export async function fetchAllOnBudgetTransactions(
   return _enrichTransactions(transactions);
 }
 
-export async function fetchAllTransactions(accounts: Account[], start: string, end: string): Promise<Transaction[]> {
+export async function fetchAllTransactions(
+  accounts: Account[],
+  start: string,
+  end: string,
+): Promise<Transaction[]> {
   let transactions: Transaction[] = [];
   for (const account of accounts) {
     const tx = await getTransactions(account.id, start, end);

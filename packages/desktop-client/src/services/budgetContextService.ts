@@ -1,6 +1,6 @@
-import { type BudgetContext } from '@desktop-client/hooks/useBudgetContext';
-
 import { type ChatMessage } from './openaiService';
+
+import { type BudgetContext } from '@desktop-client/hooks/useBudgetContext';
 
 /**
  * Formats budget context into a minimal system message for the AI

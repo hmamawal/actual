@@ -106,10 +106,7 @@ export async function queryTransactions(params: {
     query = query.filter({ category: categoryId });
   }
 
-  query = query
-    .orderBy({ date: 'desc' })
-    .limit(limit)
-    .select('*');
+  query = query.orderBy({ date: 'desc' }).limit(limit).select('*');
 
   const { data } = await send('query', query.serialize());
   return (data || []) as TransactionWithNames[];
@@ -127,7 +124,11 @@ export async function getTransactionSummary(params: {
   totalIncome: number;
   totalExpense: number;
   transactionCount: number;
-  topCategories: Array<{ categoryId: string; categoryName: string; amount: number }>;
+  topCategories: Array<{
+    categoryId: string;
+    categoryName: string;
+    amount: number;
+  }>;
 }> {
   const defaults = getDefaultDateRange();
   const {
@@ -176,11 +177,13 @@ export async function getTransactionSummary(params: {
     topCategoriesQuery.serialize(),
   );
 
-  const topCategories = ((topCategoriesData as Array<{
-    categoryId: string;
-    categoryName: string;
-    amount: number;
-  }>) || [])
+  const topCategories = (
+    (topCategoriesData as Array<{
+      categoryId: string;
+      categoryName: string;
+      amount: number;
+    }>) || []
+  )
     .map(row => ({
       categoryId: row.categoryId,
       categoryName: row.categoryName || 'Uncategorized',
@@ -271,7 +274,10 @@ export function formatTransactionSummaryForAI(summary: {
   const expense = formatAmount(summary.totalExpense);
 
   const topCats = summary.topCategories
-    .map(c => `  - ${c.categoryName || 'Uncategorized'}: ${formatAmount(c.amount)}`)
+    .map(
+      c =>
+        `  - ${c.categoryName || 'Uncategorized'}: ${formatAmount(c.amount)}`,
+    )
     .join('\n');
 
   return `# Transaction Summary\n\n- Total Income: ${income}\n- Total Expenses: ${expense}\n- Transaction Count: ${summary.transactionCount}\n\n## Top Spending Categories\n${topCats}`;

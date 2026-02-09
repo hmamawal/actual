@@ -1,15 +1,20 @@
-import api from '@actual-app/api';
 import fs from 'fs';
-import path from 'path';
 import os from 'os';
-import { BudgetFile, TransactionData, UpdateTransactionData } from './types.js';
+import path from 'path';
+
+import api from '@actual-app/api';
 import {
   APIAccountEntity,
   APICategoryEntity,
   APICategoryGroupEntity,
   APIPayeeEntity,
 } from '@actual-app/api/@types/loot-core/src/server/api-models.js';
-import { RuleEntity, TransactionEntity } from '@actual-app/api/@types/loot-core/src/types/models/index.js';
+import {
+  RuleEntity,
+  TransactionEntity,
+} from '@actual-app/api/@types/loot-core/src/types/models/index.js';
+
+import { BudgetFile, TransactionData, UpdateTransactionData } from './types.js';
 
 const DEFAULT_DATA_DIR: string = path.resolve(os.homedir() || '.', '.actual');
 
@@ -26,7 +31,7 @@ export async function initActualApi(): Promise<void> {
   if (initializing) {
     // Wait for initialization to complete if already in progress
     while (initializing) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     if (initializationError) throw initializationError;
     return;
@@ -46,11 +51,17 @@ export async function initActualApi(): Promise<void> {
 
     const budgets: BudgetFile[] = await api.getBudgets();
     if (!budgets || budgets.length === 0) {
-      throw new Error('No budgets found. Please create a budget in Actual first.');
+      throw new Error(
+        'No budgets found. Please create a budget in Actual first.',
+      );
     }
 
     // Use specified budget or the first one
-    const budgetId: string = process.env.ACTUAL_BUDGET_SYNC_ID || budgets[0].cloudFileId || budgets[0].id || '';
+    const budgetId: string =
+      process.env.ACTUAL_BUDGET_SYNC_ID ||
+      budgets[0].cloudFileId ||
+      budgets[0].id ||
+      '';
     console.error(`Loading budget: ${budgetId}`);
     await api.downloadBudget(
       budgetId,
@@ -58,14 +69,15 @@ export async function initActualApi(): Promise<void> {
         ? {
             password: process.env.ACTUAL_BUDGET_ENCRYPTION_PASSWORD,
           }
-        : undefined
+        : undefined,
     );
 
     initialized = true;
     console.error('Actual Budget API initialized successfully');
   } catch (error) {
     console.error('Failed to initialize Actual Budget API:', error);
-    initializationError = error instanceof Error ? error : new Error(String(error));
+    initializationError =
+      error instanceof Error ? error : new Error(String(error));
     throw initializationError;
   } finally {
     initializing = false;
@@ -120,7 +132,11 @@ export async function getPayees(): Promise<APIPayeeEntity[]> {
 /**
  * Get transactions for a specific account and date range (ensures API is initialized)
  */
-export async function getTransactions(accountId: string, start: string, end: string): Promise<TransactionEntity[]> {
+export async function getTransactions(
+  accountId: string,
+  start: string,
+  end: string,
+): Promise<TransactionEntity[]> {
   await initActualApi();
   return api.getTransactions(accountId, start, end);
 }
@@ -140,7 +156,9 @@ export async function getRules(): Promise<RuleEntity[]> {
 /**
  * Create a new payee (ensures API is initialized)
  */
-export async function createPayee(args: Record<string, unknown>): Promise<string> {
+export async function createPayee(
+  args: Record<string, unknown>,
+): Promise<string> {
   await initActualApi();
   return api.createPayee(args);
 }
@@ -148,7 +166,10 @@ export async function createPayee(args: Record<string, unknown>): Promise<string
 /**
  * Update a payee (ensures API is initialized)
  */
-export async function updatePayee(id: string, args: Record<string, unknown>): Promise<unknown> {
+export async function updatePayee(
+  id: string,
+  args: Record<string, unknown>,
+): Promise<unknown> {
   await initActualApi();
   return api.updatePayee(id, args);
 }
@@ -164,7 +185,9 @@ export async function deletePayee(id: string): Promise<unknown> {
 /**
  * Create a new rule (ensures API is initialized)
  */
-export async function createRule(args: Record<string, unknown>): Promise<RuleEntity> {
+export async function createRule(
+  args: Record<string, unknown>,
+): Promise<RuleEntity> {
   await initActualApi();
   return api.createRule(args);
 }
@@ -172,7 +195,9 @@ export async function createRule(args: Record<string, unknown>): Promise<RuleEnt
 /**
  * Update a rule (ensures API is initialized)
  */
-export async function updateRule(args: Record<string, unknown>): Promise<RuleEntity> {
+export async function updateRule(
+  args: Record<string, unknown>,
+): Promise<RuleEntity> {
   await initActualApi();
   return api.updateRule(args);
 }
@@ -188,7 +213,9 @@ export async function deleteRule(id: string): Promise<boolean> {
 /**
  * Create a new category (ensures API is initialized)
  */
-export async function createCategory(args: Record<string, unknown>): Promise<string> {
+export async function createCategory(
+  args: Record<string, unknown>,
+): Promise<string> {
   await initActualApi();
   return api.createCategory(args);
 }
@@ -196,7 +223,10 @@ export async function createCategory(args: Record<string, unknown>): Promise<str
 /**
  * Update a category (ensures API is initialized)
  */
-export async function updateCategory(id: string, args: Record<string, unknown>): Promise<unknown> {
+export async function updateCategory(
+  id: string,
+  args: Record<string, unknown>,
+): Promise<unknown> {
   await initActualApi();
   return api.updateCategory(id, args);
 }
@@ -212,7 +242,9 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
 /**
  * Create a new category group (ensures API is initialized)
  */
-export async function createCategoryGroup(args: Record<string, unknown>): Promise<string> {
+export async function createCategoryGroup(
+  args: Record<string, unknown>,
+): Promise<string> {
   await initActualApi();
   return api.createCategoryGroup(args);
 }
@@ -220,7 +252,10 @@ export async function createCategoryGroup(args: Record<string, unknown>): Promis
 /**
  * Update a category group (ensures API is initialized)
  */
-export async function updateCategoryGroup(id: string, args: Record<string, unknown>): Promise<unknown> {
+export async function updateCategoryGroup(
+  id: string,
+  args: Record<string, unknown>,
+): Promise<unknown> {
   await initActualApi();
   return api.updateCategoryGroup(id, args);
 }
@@ -236,7 +271,10 @@ export async function deleteCategoryGroup(id: string): Promise<unknown> {
 /**
  * Create a transaction (ensures API is initialized)
  */
-export async function createTransaction(accountId: string, data: TransactionData): Promise<string> {
+export async function createTransaction(
+  accountId: string,
+  data: TransactionData,
+): Promise<string> {
   await initActualApi();
   return api.addTransactions(accountId, [data]);
 }
@@ -244,7 +282,10 @@ export async function createTransaction(accountId: string, data: TransactionData
 /**
  * Update a transaction (ensures API is initialized)
  */
-export async function updateTransaction(id: string, data: UpdateTransactionData): Promise<unknown> {
+export async function updateTransaction(
+  id: string,
+  data: UpdateTransactionData,
+): Promise<unknown> {
   await initActualApi();
   return api.updateTransaction(id, data);
 }

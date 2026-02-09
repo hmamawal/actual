@@ -2,15 +2,18 @@
 // RESOURCES
 // ----------------------------
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import api from '@actual-app/api';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import {
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 
+import { initActualApi, shutdownActualApi } from './actual-api.js';
+import { fetchAllAccounts } from './core/data/fetch-accounts.js';
 // Import types from types.ts
 import { Account, Transaction } from './types.js';
 import { formatAmount, formatDate, getDateRange } from './utils.js';
-import { initActualApi, shutdownActualApi } from './actual-api.js';
-import { fetchAllAccounts } from './core/data/fetch-accounts.js';
 
 export const setupResources = (server: Server): void => {
   /**
@@ -21,7 +24,7 @@ export const setupResources = (server: Server): void => {
       await initActualApi();
       const accounts: Account[] = await fetchAllAccounts();
       return {
-        resources: accounts.map((account) => ({
+        resources: accounts.map(account => ({
           uri: `actual://accounts/${account.id}`,
           name: account.name,
           description: `${account.name} (${account.type || 'Account'})${account.closed ? ' - CLOSED' : ''}`,
@@ -39,7 +42,7 @@ export const setupResources = (server: Server): void => {
   /**
    * Handler for reading resources (account details and transactions)
    */
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async request => {
     try {
       await initActualApi();
       const uri: string = request.params.uri;
@@ -53,10 +56,13 @@ export const setupResources = (server: Server): void => {
         const accounts: Account[] = await api.getAccounts();
 
         const accountsText: string = accounts
-          .map((account) => {
+          .map(account => {
             const closed = account.closed ? ' (CLOSED)' : '';
             const offBudget = account.offbudget ? ' (OFF BUDGET)' : '';
-            const balance = account.balance !== undefined ? ` - ${formatAmount(account.balance)}` : '';
+            const balance =
+              account.balance !== undefined
+                ? ` - ${formatAmount(account.balance)}`
+                : '';
 
             return `- ${account.name}${closed}${offBudget}${balance} [ID: ${account.id}]`;
           })
@@ -77,7 +83,9 @@ export const setupResources = (server: Server): void => {
       if (pathParts.length === 1 && url.hostname === 'accounts') {
         const accountId: string = pathParts[0];
         const accounts: Account[] = await api.getAccounts();
-        const account: Account | undefined = accounts.find((a) => a.id === accountId);
+        const account: Account | undefined = accounts.find(
+          a => a.id === accountId,
+        );
 
         if (!account) {
           return {
@@ -116,10 +124,18 @@ To view transactions for this account, use the get-transactions tool.`;
       }
 
       // If the path is "accounts/{id}/transactions", return transactions
-      if (pathParts.length === 2 && pathParts[1] === 'transactions' && url.hostname === 'accounts') {
+      if (
+        pathParts.length === 2 &&
+        pathParts[1] === 'transactions' &&
+        url.hostname === 'accounts'
+      ) {
         const accountId: string = pathParts[0];
         const { startDate, endDate } = getDateRange();
-        const transactions: Transaction[] = await api.getTransactions(accountId, startDate, endDate);
+        const transactions: Transaction[] = await api.getTransactions(
+          accountId,
+          startDate,
+          endDate,
+        );
 
         if (!transactions || transactions.length === 0) {
           return {
@@ -134,9 +150,10 @@ To view transactions for this account, use the get-transactions tool.`;
         }
 
         // Create a markdown table of transactions
-        const header = '| Date | Payee | Category | Amount | Notes |\n| ---- | ----- | -------- | ------ | ----- |\n';
+        const header =
+          '| Date | Payee | Category | Amount | Notes |\n| ---- | ----- | -------- | ------ | ----- |\n';
         const rows: string = transactions
-          .map((t) => {
+          .map(t => {
             const amount: string = formatAmount(t.amount);
             const date: string = formatDate(t.date);
             const payee: string = t.payee_name || '(No payee)';

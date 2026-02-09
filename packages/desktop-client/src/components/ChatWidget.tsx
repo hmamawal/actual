@@ -31,6 +31,11 @@ type Message = {
   timestamp: Date;
 };
 
+type ContextMenuState = {
+  x: number;
+  y: number;
+} | null;
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -45,6 +50,7 @@ export function ChatWidget() {
     null,
   );
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +61,7 @@ export function ChatWidget() {
   useEffect(() => {
     const loaded = loadConversations();
     setConversations(sortConversationsByRecent(loaded));
-    
+
     // Start with a new conversation if none exist
     if (loaded.length === 0) {
       const newConv = createConversation();
@@ -93,7 +99,7 @@ export function ChatWidget() {
   const handleDeleteConversation = (convId: string) => {
     const updated = deleteConversation(conversations, convId);
     setConversations(updated);
-    
+
     if (currentConversation?.id === convId) {
       // Create a new conversation if we deleted the current one
       const newConv = createConversation();
@@ -114,7 +120,7 @@ export function ChatWidget() {
     };
 
     const newMessages = [...currentConversation.messages, userMessage];
-    
+
     // Update conversation title if this is the first message
     let updatedTitle = currentConversation.title;
     if (currentConversation.messages.length === 0) {
@@ -180,7 +186,7 @@ export function ChatWidget() {
         sender: 'bot',
         timestamp: new Date(),
       };
-      
+
       const errorConv = updateConversation(updatedConv, {
         messages: [...newMessages, errorBot],
       });
@@ -194,6 +200,32 @@ export function ChatWidget() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleCopyAllMessages = () => {
+    if (!currentConversation?.messages) return;
+
+    const allMessages = currentConversation.messages
+      .map(msg => {
+        const senderLabel = msg.sender === 'user' ? 'You' : 'AI Assistant';
+        return `${senderLabel}: ${msg.content}`;
+      })
+      .join('\n\n');
+
+    navigator.clipboard.writeText(allMessages).then(() => {
+      setContextMenu(null);
+      console.log('All messages copied to clipboard');
+    });
+  };
+
+  const handleMessagesContextMenu = (e: any) => {
+    e.preventDefault();
+    if (
+      currentConversation?.messages &&
+      currentConversation.messages.length > 0
+    ) {
+      setContextMenu({ x: e.clientX, y: e.clientY });
     }
   };
 
@@ -248,6 +280,20 @@ export function ChatWidget() {
     };
   }, [isDragging, dragOffset]);
 
+  // Close context menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setContextMenu(null);
+    };
+
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [contextMenu]);
+
   return (
     <>
       {/* Floating Chat Icon */}
@@ -291,373 +337,427 @@ export function ChatWidget() {
 
       {/* Floating Chat Box */}
       {isOpen && (
-        <div
-          ref={chatBoxRef}
-          onMouseDown={handleMouseDown}
-          style={{
-            position: 'fixed',
-            left: position ? `${position.x}px` : 'auto',
-            top: position ? `${position.y}px` : 'auto',
-            right: !position ? '20px' : 'auto',
-            bottom: !position ? '80px' : 'auto',
-            width: '360px',
-            height: '500px',
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 5px 40px rgba(0, 0, 0, 0.16)',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 999,
-            userSelect: 'none',
-            cursor: isDragging ? 'grabbing' : 'grab',
-            fontFamily:
-              '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
-          }}
-        >
-          {/* Header */}
+        <>
           <div
+            ref={chatBoxRef}
+            onMouseDown={handleMouseDown}
             style={{
-              padding: '12px 16px',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              borderTopLeftRadius: '16px',
-              borderTopRightRadius: '16px',
+              position: 'fixed',
+              left: position ? `${position.x}px` : 'auto',
+              top: position ? `${position.y}px` : 'auto',
+              right: !position ? '20px' : 'auto',
+              bottom: !position ? '80px' : 'auto',
+              width: '360px',
+              height: '500px',
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              boxShadow: '0 5px 40px rgba(0, 0, 0, 0.16)',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              cursor: 'grab',
-              gap: '8px',
-            }}
-            onMouseDown={e => {
-              handleMouseDown(e);
+              flexDirection: 'column',
+              zIndex: 999,
+              cursor: isDragging ? 'grabbing' : 'grab',
+              fontFamily:
+                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
             }}
           >
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              type="button"
-              title="Chat History"
-              style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '18px',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              ☰
-            </button>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '14px',
-                fontWeight: 600,
-                flex: 1,
-                textAlign: 'center',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {currentConversation?.title || 'AI Assistant'}
-            </h3>
-            <button
-              onClick={handleStartNewChat}
-              type="button"
-              title="New Chat"
-              style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '18px',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              +
-            </button>
-            <button
-              onClick={() => setIsOpen(false)}
-              type="button"
-              title="Close"
-              style={{
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '20px',
-                cursor: 'pointer',
-                padding: '0',
-                width: '24px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Main Content Area */}
-          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            {/* History Sidebar */}
-            {showHistory && (
-              <div
-                style={{
-                  width: '200px',
-                  borderRight: '1px solid #e5e7eb',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  backgroundColor: '#ffffff',
-                }}
-              >
-                <div
-                  style={{
-                    padding: '12px',
-                    borderBottom: '1px solid #e5e7eb',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#6b7280',
-                  }}
-                >
-                  Chat History
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '8px',
-                  }}
-                >
-                  {conversations.map(conv => (
-                    <div
-                      key={conv.id}
-                      onClick={() => handleSelectConversation(conv)}
-                      style={{
-                        padding: '8px',
-                        marginBottom: '4px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        backgroundColor:
-                          currentConversation?.id === conv.id
-                            ? '#dbeafe'
-                            : 'transparent',
-                        border:
-                          currentConversation?.id === conv.id
-                            ? '1px solid #2563eb'
-                            : '1px solid transparent',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                      onMouseEnter={e => {
-                        if (currentConversation?.id !== conv.id) {
-                          e.currentTarget.style.backgroundColor = '#f3f4f6';
-                        }
-                      }}
-                      onMouseLeave={e => {
-                        if (currentConversation?.id !== conv.id) {
-                          e.currentTarget.style.backgroundColor =
-                            'transparent';
-                        }
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            color: '#1f2937',
-                          }}
-                        >
-                          {conv.title}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '10px',
-                            color: '#9ca3af',
-                            marginTop: '2px',
-                          }}
-                        >
-                          {new Date(conv.updatedAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleDeleteConversation(conv.id);
-                        }}
-                        type="button"
-                        style={{
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          padding: '4px',
-                        }}
-                        title="Delete"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Messages Container */}
+            {/* Header */}
             <div
               style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '16px',
+                padding: '12px 16px',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                borderTopLeftRadius: '16px',
+                borderTopRightRadius: '16px',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                backgroundColor: '#f9fafb',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'grab',
+                gap: '8px',
+                userSelect: 'none',
+              }}
+              onMouseDown={e => {
+                handleMouseDown(e);
               }}
             >
-              {currentConversation?.messages.length === 0 && (
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                type="button"
+                title={t("Chat History")}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                ☰
+              </button>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  flex: 1,
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentConversation?.title || 'AI Assistant'}
+              </h3>
+              <button
+                onClick={handleStartNewChat}
+                type="button"
+                title={t("New Chat")}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                +
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                type="button"
+                title={t("Close")}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Main Content Area */}
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+              {/* History Sidebar */}
+              {showHistory && (
                 <div
                   style={{
+                    width: '200px',
+                    borderRight: '1px solid #e5e7eb',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    color: '#9ca3af',
-                    fontSize: '14px',
-                    textAlign: 'center',
-                    padding: '20px',
+                    flexDirection: 'column',
+                    backgroundColor: '#ffffff',
                   }}
                 >
-                  Hi! 👋 I have access to your budget data.
-                  <br />
-                  Ask me questions about your accounts, categories, or finances!
+                  <div
+                    style={{
+                      padding: '12px',
+                      borderBottom: '1px solid #e5e7eb',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                    }}
+                  ><Trans>
+                    Chat History
+                  </Trans></div>
+                  <div
+                    style={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      padding: '8px',
+                    }}
+                  >
+                    {conversations.map(conv => (
+                      <div
+                        key={conv.id}
+                        onClick={() => handleSelectConversation(conv)}
+                        style={{
+                          padding: '8px',
+                          marginBottom: '4px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          backgroundColor:
+                            currentConversation?.id === conv.id
+                              ? '#dbeafe'
+                              : 'transparent',
+                          border:
+                            currentConversation?.id === conv.id
+                              ? '1px solid #2563eb'
+                              : '1px solid transparent',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                        onMouseEnter={e => {
+                          if (currentConversation?.id !== conv.id) {
+                            e.currentTarget.style.backgroundColor = '#f3f4f6';
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (currentConversation?.id !== conv.id) {
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
+                          }
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              color: '#1f2937',
+                            }}
+                          >
+                            {conv.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '10px',
+                              color: '#9ca3af',
+                              marginTop: '2px',
+                            }}
+                          >
+                            {new Date(conv.updatedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDeleteConversation(conv.id);
+                          }}
+                          type="button"
+                          style={{
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            padding: '4px',
+                          }}
+                          title={t("Delete")}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {currentConversation?.messages.map(message => (
-                <div
-                  key={message.id}
+              {/* Messages Container */}
+              <div
+                onContextMenu={handleMessagesContextMenu}
                 style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '16px',
                   display: 'flex',
-                  justifyContent:
-                    message.sender === 'user' ? 'flex-end' : 'flex-start',
-                  marginBottom: '4px',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  backgroundColor: '#f9fafb',
+                  userSelect: 'text',
+                  position: 'relative',
                 }}
               >
+                {currentConversation?.messages.length === 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      color: '#9ca3af',
+                      fontSize: '14px',
+                      textAlign: 'center',
+                      padding: '20px',
+                    }}
+                  >
+                    Hi! 👋 I have access to your budget data.
+                    <br />
+                    Ask me questions about your accounts, categories, or
+                    finances!
+                  </div>
+                )}
+
+                {currentConversation?.messages.map(message => (
+                  <div
+                    key={message.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent:
+                        message.sender === 'user' ? 'flex-end' : 'flex-start',
+                      marginBottom: '4px',
+                      userSelect: 'text',
+                    }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: '80%',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        backgroundColor:
+                          message.sender === 'user' ? '#2563eb' : '#e5e7eb',
+                        color: message.sender === 'user' ? 'white' : '#1f2937',
+                        fontSize: '14px',
+                        wordWrap: 'break-word',
+                        lineHeight: '1.4',
+                        userSelect: 'text',
+                      }}
+                    >
+                      {message.content}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+
+            {/* Input Area */}
+            <div
+              style={{
+                padding: '12px',
+                borderTop: '1px solid #e5e7eb',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                backgroundColor: 'white',
+                borderBottomLeftRadius: '16px',
+                borderBottomRightRadius: '16px',
+                userSelect: 'none',
+              }}
+            >
+              {error && (
                 <div
                   style={{
-                    maxWidth: '80%',
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    backgroundColor:
-                      message.sender === 'user' ? '#2563eb' : '#e5e7eb',
-                    color: message.sender === 'user' ? 'white' : '#1f2937',
-                    fontSize: '14px',
-                    wordWrap: 'break-word',
+                    padding: '8px 12px',
+                    backgroundColor: '#fee2e2',
+                    color: '#991b1b',
+                    borderRadius: '6px',
+                    fontSize: '12px',
                     lineHeight: '1.4',
                   }}
                 >
-                  {message.content}
+                  {error}
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Input Area */}
-        <div
-            style={{
-              padding: '12px',
-              borderTop: '1px solid #e5e7eb',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              backgroundColor: 'white',
-              borderBottomLeftRadius: '16px',
-              borderBottomRightRadius: '16px',
-            }}
-          >
-            {error && (
-              <div
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#fee2e2',
-                  color: '#991b1b',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  lineHeight: '1.4',
-                }}
-              >
-                {error}
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <textarea
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={
-                  isLoading ? 'Waiting for response...' : 'Type your message...'
-                }
-                disabled={isLoading}
-                style={{
-                  flex: 1,
-                  padding: '10px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontFamily:
-                    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  resize: 'none',
-                  maxHeight: '80px',
-                  opacity: isLoading ? 0.6 : 1,
-                  cursor: isLoading ? 'not-allowed' : 'text',
-                }}
-                rows={1}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={isLoading}
-                type="button"
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: isLoading ? '#9ca3af' : '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '16px',
-                  transition: 'background-color 0.2s',
-                  flexShrink: 0,
-                  opacity: isLoading ? 0.7 : 1,
-                }}
-                onMouseEnter={e => {
-                  if (!isLoading) {
-                    e.currentTarget.style.backgroundColor = '#1d4ed8';
+              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <textarea
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={
+                    isLoading
+                      ? 'Waiting for response...'
+                      : 'Type your message...'
                   }
-                }}
-                onMouseLeave={e => {
-                  if (!isLoading) {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                  }
-                }}
-              >
-                {isLoading ? '...' : <Trans>Send</Trans>}
-              </button>
+                  disabled={isLoading}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontFamily:
+                      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    resize: 'none',
+                    maxHeight: '80px',
+                    opacity: isLoading ? 0.6 : 1,
+                    cursor: isLoading ? 'not-allowed' : 'text',
+                  }}
+                  rows={1}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isLoading}
+                  type="button"
+                  style={{
+                    padding: '10px 16px',
+                    backgroundColor: isLoading ? '#9ca3af' : '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    fontSize: '16px',
+                    transition: 'background-color 0.2s',
+                    flexShrink: 0,
+                    opacity: isLoading ? 0.7 : 1,
+                  }}
+                  onMouseEnter={e => {
+                    if (!isLoading) {
+                      e.currentTarget.style.backgroundColor = '#1d4ed8';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isLoading) {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                    }
+                  }}
+                >
+                  {isLoading ? '...' : <Trans>Send</Trans>}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Context Menu */}
+          {contextMenu && (
+            <div
+              style={{
+                position: 'fixed',
+                left: `${contextMenu.x}px`,
+                top: `${contextMenu.y}px`,
+                backgroundColor: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                zIndex: 1000,
+                minWidth: '180px',
+                userSelect: 'none',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={handleCopyAllMessages}
+                type="button"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#1f2937',
+                  transition: 'background-color 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                📋 Copy All Messages
+              </button>
+            </div>
+          )}
+        </>
       )}
     </>
   );

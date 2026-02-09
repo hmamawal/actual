@@ -1,5 +1,10 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { GetPromptRequestSchema, ListPromptsRequestSchema, GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
+import {
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptResult,
+} from '@modelcontextprotocol/sdk/types.js';
+
 import { FinancialInsightsArgs, BudgetReviewArgs } from './types.js';
 import { getDateRange } from './utils.js';
 
@@ -37,7 +42,9 @@ export const promptsSchema = [
   },
 ];
 
-const financialInsightsPrompt = (args: FinancialInsightsArgs): GetPromptResult => {
+const financialInsightsPrompt = (
+  args: FinancialInsightsArgs,
+): GetPromptResult => {
   const { startDate, endDate } = args || {};
   const { startDate: start, endDate: end } = getDateRange(startDate, endDate);
 
@@ -173,7 +180,7 @@ export const setupPrompts = (server: Server): void => {
   /**
    * Handler for getting prompts
    */
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  server.setRequestHandler(GetPromptRequestSchema, async request => {
     try {
       const { name, arguments: promptArgs } = request.params;
 

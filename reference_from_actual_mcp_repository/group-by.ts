@@ -2,9 +2,11 @@
 import type { CategorySpending, GroupSpending } from '../types/domain.js';
 
 export class GroupAggregator {
-  aggregateAndSort(spendingByCategory: Record<string, CategorySpending>): GroupSpending[] {
+  aggregateAndSort(
+    spendingByCategory: Record<string, CategorySpending>,
+  ): GroupSpending[] {
     const spendingByGroup: Record<string, GroupSpending> = {};
-    Object.values(spendingByCategory).forEach((category) => {
+    Object.values(spendingByCategory).forEach(category => {
       if (!spendingByGroup[category.group]) {
         spendingByGroup[category.group] = {
           name: category.group,
@@ -17,10 +19,10 @@ export class GroupAggregator {
     });
     // Sort groups by absolute total (descending)
     const sortedGroups: GroupSpending[] = Object.values(spendingByGroup).sort(
-      (a, b) => Math.abs(b.total) - Math.abs(a.total)
+      (a, b) => Math.abs(b.total) - Math.abs(a.total),
     );
     // Sort categories within each group by absolute total (descending)
-    sortedGroups.forEach((group) => {
+    sortedGroups.forEach(group => {
       group.categories.sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
     });
     return sortedGroups;
