@@ -881,7 +881,9 @@ test('getBudgetSummary: successfully retrieves comprehensive budget data', async
   expect(fullSummary.accounts.length).toBeGreaterThan(0);
 
   // Verify accounts have balances
-  const accountWithBalance = fullSummary.accounts.find(acc => acc.balance !== undefined);
+  const accountWithBalance = fullSummary.accounts.find(
+    acc => acc.balance !== undefined,
+  );
   expect(accountWithBalance).toBeDefined();
 
   // Verify transactions are present
