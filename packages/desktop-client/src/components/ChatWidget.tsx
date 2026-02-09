@@ -7,6 +7,8 @@ import {
 } from 'react';
 import { Trans } from 'react-i18next';
 
+import { useBudgetContext } from '@desktop-client/hooks/useBudgetContext';
+import { buildChatMessagesWithBudgetContext } from '@desktop-client/services/budgetContextService';
 import {
   sendChatMessage,
   type ChatMessage,
@@ -32,6 +34,9 @@ export function ChatWidget() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
+
+  // Get current budget context for AI awareness
+  const budgetContext = useBudgetContext();
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -62,8 +67,14 @@ export function ChatWidget() {
         content: msg.content,
       }));
 
+      // Add budget context to messages for AI awareness
+      const messagesWithContext = buildChatMessagesWithBudgetContext(
+        chatMessages,
+        budgetContext,
+      );
+
       // Get response from OpenAI
-      const response = await sendChatMessage(chatMessages);
+      const response = await sendChatMessage(messagesWithContext);
 
       const botMessage: Message = {
         id: `msg-${Date.now()}-bot`,
@@ -282,7 +293,9 @@ export function ChatWidget() {
                   padding: '20px',
                 }}
               >
-                Start a conversation! Ask me anything.
+                Hi! 👋 I have access to your budget data.
+                <br />
+                Ask me questions about your accounts, categories, or finances!
               </div>
             )}
 
