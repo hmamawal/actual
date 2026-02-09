@@ -22,6 +22,10 @@ import {
   type ChatConversation,
 } from '@desktop-client/services/chatHistoryService';
 import {
+  formatDocsForChat,
+  searchDocs,
+} from '@desktop-client/services/docsSearchService';
+import {
   formatSearchResultsForAI,
   formatSearchResultsForChat,
   isSearchConfigured,
@@ -152,6 +156,9 @@ export function ChatWidget() {
       // Check for /search command
       const searchMatch = userInputContent.match(/^\/search\s+(.+)$/i);
       
+      // Check for /docs command
+      const docsMatch = userInputContent.match(/^\/docs\s+(.+)$/i);
+      
       if (searchMatch) {
         // Handle web search
         if (!isSearchConfigured()) {
@@ -172,6 +179,32 @@ export function ChatWidget() {
         const botMessage: Message = {
           id: `msg-${Date.now()}-bot`,
           content: searchResultsText,
+          sender: 'bot',
+          timestamp: new Date(),
+        };
+
+        const finalConv = updateConversation(updatedConv, {
+          messages: [...newMessages, botMessage],
+        });
+
+        setCurrentConversation(finalConv);
+
+        // Update in conversations list
+        setConversations(prev => {
+          const filtered = prev.filter(c => c.id !== finalConv.id);
+          return sortConversationsByRecent([finalConv, ...filtered]);
+        });
+      } else if (docsMatch) {
+        // Handle documentation search
+        const docsQuery = docsMatch[1];
+        const docsResults = searchDocs(docsQuery, 5);
+        
+        // Format results for chat display
+        const docsResultsText = formatDocsForChat(docsResults, docsQuery);
+
+        const botMessage: Message = {
+          id: `msg-${Date.now()}-bot`,
+          content: docsResultsText,
           sender: 'bot',
           timestamp: new Date(),
         };
@@ -645,6 +678,8 @@ export function ChatWidget() {
                     Ask me questions about your accounts, categories, or
                     finances!
                     <br />
+                    <br />
+                    💡 Use <strong>/docs [topic]</strong> to search documentation
                     <br />
                     {isSearchConfigured() && (
                       <>
