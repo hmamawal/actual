@@ -10,6 +10,16 @@ import { Trans } from 'react-i18next';
 import { useBudgetContext } from '@desktop-client/hooks/useBudgetContext';
 import { buildChatMessagesWithBudgetContext } from '@desktop-client/services/budgetContextService';
 import {
+  createConversation,
+  deleteConversation,
+  generateConversationTitle,
+  loadConversations,
+  saveConversations,
+  sortConversationsByRecent,
+  updateConversation,
+  type ChatConversation,
+} from '@desktop-client/services/chatHistoryService';
+import {
   sendChatMessage,
   type ChatMessage,
 } from '@desktop-client/services/openaiService';
@@ -23,7 +33,10 @@ type Message = {
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [currentConversation, setCurrentConversation] =
+    useState<ChatConversation | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,13 +51,59 @@ export function ChatWidget() {
   // Get current budget context for AI awareness
   const budgetContext = useBudgetContext();
 
+  // Load conversations on mount
+  useEffect(() => {
+    const loaded = loadConversations();
+    setConversations(sortConversationsByRecent(loaded));
+    
+    // Start with a new conversation if none exist
+    if (loaded.length === 0) {
+      const newConv = createConversation();
+      setCurrentConversation(newConv);
+    } else {
+      // Load the most recent conversation
+      setCurrentConversation(loaded[0]);
+    }
+  }, []);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [currentConversation?.messages]);
+
+  // Save conversations whenever they change
+  useEffect(() => {
+    if (conversations.length > 0) {
+      saveConversations(conversations);
+    }
+  }, [conversations]);
+
+  const handleStartNewChat = () => {
+    const newConv = createConversation();
+    setCurrentConversation(newConv);
+    setConversations(prev => [newConv, ...prev]);
+    setShowHistory(false);
+  };
+
+  const handleSelectConversation = (conv: ChatConversation) => {
+    setCurrentConversation(conv);
+    setShowHistory(false);
+  };
+
+  const handleDeleteConversation = (convId: string) => {
+    const updated = deleteConversation(conversations, convId);
+    setConversations(updated);
+    
+    if (currentConversation?.id === convId) {
+      // Create a new conversation if we deleted the current one
+      const newConv = createConversation();
+      setCurrentConversation(newConv);
+      setConversations(prev => [newConv, ...prev]);
+    }
+  };
 
   const handleSendMessage = async () => {
-    if (inputValue.trim() === '') return;
+    if (inputValue.trim() === '' || !currentConversation) return;
 
     // Add user message
     const userMessage: Message = {
@@ -54,8 +113,20 @@ export function ChatWidget() {
       timestamp: new Date(),
     };
 
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    const newMessages = [...currentConversation.messages, userMessage];
+    
+    // Update conversation title if this is the first message
+    let updatedTitle = currentConversation.title;
+    if (currentConversation.messages.length === 0) {
+      updatedTitle = generateConversationTitle(inputValue);
+    }
+
+    const updatedConv = updateConversation(currentConversation, {
+      messages: newMessages,
+      title: updatedTitle,
+    });
+
+    setCurrentConversation(updatedConv);
     setInputValue('');
     setIsLoading(true);
     setError(null);
@@ -67,10 +138,11 @@ export function ChatWidget() {
         content: msg.content,
       }));
 
-      // Add budget context to messages for AI awareness
+      // Add budget context only if not already sent (saves tokens!)
       const messagesWithContext = buildChatMessagesWithBudgetContext(
         chatMessages,
         budgetContext,
+        updatedConv.budgetContextSent,
       );
 
       // Get response from OpenAI
@@ -83,7 +155,18 @@ export function ChatWidget() {
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, botMessage]);
+      const finalConv = updateConversation(updatedConv, {
+        messages: [...newMessages, botMessage],
+        budgetContextSent: true, // Mark context as sent
+      });
+
+      setCurrentConversation(finalConv);
+
+      // Update in conversations list
+      setConversations(prev => {
+        const filtered = prev.filter(c => c.id !== finalConv.id);
+        return sortConversationsByRecent([finalConv, ...filtered]);
+      });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to get response from AI';
@@ -97,7 +180,11 @@ export function ChatWidget() {
         sender: 'bot',
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorBot]);
+      
+      const errorConv = updateConversation(updatedConv, {
+        messages: [...newMessages, errorBot],
+      });
+      setCurrentConversation(errorConv);
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +197,7 @@ export function ChatWidget() {
     }
   };
 
-  const handleMouseDown = (e: MouseEvent) => {
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     if (chatBoxRef.current && chatBoxRef.current.contains(e.target as Node)) {
       const header = chatBoxRef.current.querySelector('div');
       // Only allow dragging from the header
@@ -126,7 +213,7 @@ export function ChatWidget() {
   };
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
       if (isDragging && chatBoxRef.current) {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
@@ -230,7 +317,7 @@ export function ChatWidget() {
           {/* Header */}
           <div
             style={{
-              padding: '16px',
+              padding: '12px 16px',
               backgroundColor: '#2563eb',
               color: 'white',
               borderTopLeftRadius: '16px',
@@ -239,17 +326,64 @@ export function ChatWidget() {
               justifyContent: 'space-between',
               alignItems: 'center',
               cursor: 'grab',
+              gap: '8px',
             }}
             onMouseDown={e => {
               handleMouseDown(e);
             }}
           >
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
-              AI Assistant
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              type="button"
+              title="Chat History"
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: 'white',
+                fontSize: '18px',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              ☰
+            </button>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: '14px',
+                fontWeight: 600,
+                flex: 1,
+                textAlign: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {currentConversation?.title || 'AI Assistant'}
             </h3>
+            <button
+              onClick={handleStartNewChat}
+              type="button"
+              title="New Chat"
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: 'white',
+                fontSize: '18px',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              +
+            </button>
             <button
               onClick={() => setIsOpen(false)}
               type="button"
+              title="Close"
               style={{
                 backgroundColor: 'transparent',
                 border: 'none',
@@ -268,40 +402,151 @@ export function ChatWidget() {
             </button>
           </div>
 
-          {/* Messages Container */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              backgroundColor: '#f9fafb',
-            }}
-          >
-            {messages.length === 0 && (
+          {/* Main Content Area */}
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            {/* History Sidebar */}
+            {showHistory && (
               <div
                 style={{
+                  width: '200px',
+                  borderRight: '1px solid #e5e7eb',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  color: '#9ca3af',
-                  fontSize: '14px',
-                  textAlign: 'center',
-                  padding: '20px',
+                  flexDirection: 'column',
+                  backgroundColor: '#ffffff',
                 }}
               >
-                Hi! 👋 I have access to your budget data.
-                <br />
-                Ask me questions about your accounts, categories, or finances!
+                <div
+                  style={{
+                    padding: '12px',
+                    borderBottom: '1px solid #e5e7eb',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#6b7280',
+                  }}
+                >
+                  Chat History
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '8px',
+                  }}
+                >
+                  {conversations.map(conv => (
+                    <div
+                      key={conv.id}
+                      onClick={() => handleSelectConversation(conv)}
+                      style={{
+                        padding: '8px',
+                        marginBottom: '4px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor:
+                          currentConversation?.id === conv.id
+                            ? '#dbeafe'
+                            : 'transparent',
+                        border:
+                          currentConversation?.id === conv.id
+                            ? '1px solid #2563eb'
+                            : '1px solid transparent',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                      onMouseEnter={e => {
+                        if (currentConversation?.id !== conv.id) {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (currentConversation?.id !== conv.id) {
+                          e.currentTarget.style.backgroundColor =
+                            'transparent';
+                        }
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: '#1f2937',
+                          }}
+                        >
+                          {conv.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '10px',
+                            color: '#9ca3af',
+                            marginTop: '2px',
+                          }}
+                        >
+                          {new Date(conv.updatedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleDeleteConversation(conv.id);
+                        }}
+                        type="button"
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          padding: '4px',
+                        }}
+                        title="Delete"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            {messages.map(message => (
-              <div
-                key={message.id}
+            {/* Messages Container */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                backgroundColor: '#f9fafb',
+              }}
+            >
+              {currentConversation?.messages.length === 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    color: '#9ca3af',
+                    fontSize: '14px',
+                    textAlign: 'center',
+                    padding: '20px',
+                  }}
+                >
+                  Hi! 👋 I have access to your budget data.
+                  <br />
+                  Ask me questions about your accounts, categories, or finances!
+                </div>
+              )}
+
+              {currentConversation?.messages.map(message => (
+                <div
+                  key={message.id}
                 style={{
                   display: 'flex',
                   justifyContent:
@@ -328,9 +573,10 @@ export function ChatWidget() {
             ))}
             <div ref={messagesEndRef} />
           </div>
+        </div>
 
-          {/* Input Area */}
-          <div
+        {/* Input Area */}
+        <div
             style={{
               padding: '12px',
               borderTop: '1px solid #e5e7eb',

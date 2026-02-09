@@ -3,26 +3,25 @@ import { type BudgetContext } from '@desktop-client/hooks/useBudgetContext';
 import { type ChatMessage } from './openaiService';
 
 /**
- * Formats budget context into a system message for the AI
- * This provides the AI with information about the current budget
+ * Formats budget context into a CONCISE system message for the AI
+ * This is sent ONCE per conversation to save tokens
  */
 export function formatBudgetContextForAI(budgetContext: BudgetContext): string {
   if (!budgetContext.accounts || budgetContext.accounts.length === 0) {
     return '';
   }
 
+  // Concise account summary - only names and balances
   const accountsSummary = budgetContext.accounts
+    .filter(account => !account.closed) // Skip closed accounts to save tokens
     .map(account => {
-      const type = account.closed
-        ? '[CLOSED]'
-        : account.offbudget
-          ? '[OFF-BUDGET]'
-          : '[ON-BUDGET]';
-      const balance = (account.balance / 100).toFixed(2); // Convert from cents
-      return `  • ${account.name} (${type}): $${balance}`;
+      const type = account.offbudget ? 'OFF' : 'ON';
+      const balance = (account.balance / 100).toFixed(2);
+      return `${account.name}(${type}):$${balance}`;
     })
-    .join('\n');
+    .join(', ');
 
+  // Concise categories - just the names grouped
   const categoriesByGroup = budgetContext.categories.reduce(
     (acc, cat) => {
       if (!acc[cat.group]) {
@@ -35,31 +34,28 @@ export function formatBudgetContextForAI(budgetContext: BudgetContext): string {
   );
 
   const categoriesSummary = Object.entries(categoriesByGroup)
-    .map(([group, cats]) => `  ${group}:\n    ${cats.join(', ')}`)
-    .join('\n');
+    .map(([group, cats]) => `${group}: ${cats.join(', ')}`)
+    .join(' | ');
 
-  return `
-Current Budget Context:
-=======================
-
-Accounts (${budgetContext.onBudgetCount} on-budget, ${budgetContext.offBudgetCount} off-budget, ${budgetContext.closedAccountCount} closed):
-${accountsSummary}
-
-Budget Categories:
-${categoriesSummary}
-
-You are helping the user manage their personal finances with this budget data. Answer questions about their accounts, categories, and financial situation based on the data shown above.
-`;
+  // VERY concise system message - essential info only
+  return `Budget: Accounts[${accountsSummary}]. Categories[${categoriesSummary}]. Answer financial questions using this data. For transactions, user will provide them when needed.`;
 }
 
 /**
  * Builds chat messages with budget context included
- * The context is added as a system message at the beginning
+ * Context is only added ONCE at the start of a conversation (when budgetContextSent is false)
+ * This saves significant tokens on follow-up messages
  */
 export function buildChatMessagesWithBudgetContext(
   messages: ChatMessage[],
   budgetContext: BudgetContext,
+  budgetContextAlreadySent: boolean,
 ): ChatMessage[] {
+  // If context was already sent in this conversation, don't send it again
+  if (budgetContextAlreadySent) {
+    return messages;
+  }
+
   const budgetContextMessage = formatBudgetContextForAI(budgetContext);
 
   // If there's no budget context, return messages as-is
@@ -69,16 +65,12 @@ export function buildChatMessagesWithBudgetContext(
 
   // Check if we already have a budget context system message
   const hasContextMessage = messages.some(
-    m => m.role === 'system' && m.content.includes('Current Budget Context'),
+    m => m.role === 'system' && m.content.includes('Budget:'),
   );
 
   if (hasContextMessage) {
-    // Replace the existing context message
-    return messages.map(m =>
-      m.role === 'system' && m.content.includes('Current Budget Context')
-        ? { ...m, content: budgetContextMessage }
-        : m,
-    );
+    // Already in messages, no need to add again
+    return messages;
   }
 
   // Add context as first system message if no system message exists
@@ -87,7 +79,7 @@ export function buildChatMessagesWithBudgetContext(
     return [
       {
         role: 'system',
-        content: messages[0].content + '\n' + budgetContextMessage,
+        content: messages[0].content + ' ' + budgetContextMessage,
       },
       ...messages.slice(1),
     ];

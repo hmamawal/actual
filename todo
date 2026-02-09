@@ -1,0 +1,7 @@
+1. add the ability to view the reports tab and for the ai to be able to create a custom report
+2. add more flexibility to report creation
+3. add web search function
+4. add ability for the ai to see the screen you're currently looking at (or at least the current data being displayed to you) so that answers can be generated based on that
+5. add indexing for additional data and transactions
+6. make sure data and token usage is not being wasted
+7. allow the ai to execute python code in a secluded enviornment to be able to generate accurate visuals and do calculations
