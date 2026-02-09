@@ -1,6 +1,7 @@
 import { type ChatMessage } from './openaiService';
 
 import { type BudgetContext } from '@desktop-client/hooks/useBudgetContext';
+import { type ScreenContext } from '@desktop-client/hooks/useScreenContext';
 
 /**
  * Formats budget context into a minimal system message for the AI
@@ -26,34 +27,65 @@ export function formatBudgetContextForAI(budgetContext: BudgetContext): string {
 }
 
 /**
- * Builds chat messages with budget context included
- * Context is only added ONCE at the start of a conversation (when budgetContextSent is false)
+ * Formats screen context for AI
+ * This is sent with each message as it changes frequently
+ */
+export function formatScreenContextForAI(screenContext: ScreenContext): string {
+  return `User viewing: ${screenContext.screenName} (${screenContext.currentRoute})`;
+}
+
+/**
+ * Builds chat messages with budget and screen context included
+ * Budget context is only added ONCE at the start of a conversation (when budgetContextSent is false)
+ * Screen context is added with each message as it may change
  * This saves significant tokens on follow-up messages
  */
 export function buildChatMessagesWithBudgetContext(
   messages: ChatMessage[],
   budgetContext: BudgetContext,
+  screenContext: ScreenContext,
   budgetContextAlreadySent: boolean,
 ): ChatMessage[] {
-  // If context was already sent in this conversation, don't send it again
-  if (budgetContextAlreadySent) {
-    return messages;
-  }
-
   const budgetContextMessage = formatBudgetContextForAI(budgetContext);
+  const screenContextMessage = formatScreenContextForAI(screenContext);
 
-  // If there's no budget context, return messages as-is
-  if (!budgetContextMessage.trim()) {
+  // Build the context message
+  let contextMessage = '';
+  
+  // Add budget context if not already sent
+  if (!budgetContextAlreadySent && budgetContextMessage.trim()) {
+    contextMessage += budgetContextMessage;
+  }
+  
+  // Always add screen context (it changes frequently)
+  if (screenContextMessage.trim()) {
+    if (contextMessage) {
+      contextMessage += ' ';
+    }
+    contextMessage += screenContextMessage;
+  }
+
+  // If there's no context to add, return messages as-is
+  if (!contextMessage.trim()) {
     return messages;
   }
 
-  // Check if we already have a budget context system message
+  // Check if we already have a context system message
   const hasContextMessage = messages.some(
     m => m.role === 'system' && m.content.includes('Budget:'),
   );
 
-  if (hasContextMessage) {
-    // Already in messages, no need to add again
+  if (hasContextMessage && budgetContextAlreadySent) {
+    // Budget context already in messages, just prepend screen context to first user message
+    const firstUserIndex = messages.findIndex(m => m.role === 'user');
+    if (firstUserIndex !== -1 && screenContextMessage.trim()) {
+      const updatedMessages = [...messages];
+      updatedMessages[firstUserIndex] = {
+        ...updatedMessages[firstUserIndex],
+        content: `[${screenContextMessage}] ${updatedMessages[firstUserIndex].content}`,
+      };
+      return updatedMessages;
+    }
     return messages;
   }
 
@@ -63,12 +95,12 @@ export function buildChatMessagesWithBudgetContext(
     return [
       {
         role: 'system',
-        content: messages[0].content + ' ' + budgetContextMessage,
+        content: messages[0].content + ' ' + contextMessage,
       },
       ...messages.slice(1),
     ];
   }
 
   // Prepend as new system message
-  return [{ role: 'system', content: budgetContextMessage }, ...messages];
+  return [{ role: 'system', content: contextMessage }, ...messages];
 }

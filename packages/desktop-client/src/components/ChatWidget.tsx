@@ -10,6 +10,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { MarkdownMessage } from './MarkdownMessage';
 
 import { useBudgetContext } from '@desktop-client/hooks/useBudgetContext';
+import { useScreenContext } from '@desktop-client/hooks/useScreenContext';
 import { buildChatMessagesWithBudgetContext } from '@desktop-client/services/budgetContextService';
 import {
   createConversation,
@@ -68,6 +69,7 @@ export function ChatWidget() {
 
   // Get current budget context for AI awareness
   const budgetContext = useBudgetContext();
+  const screenContext = useScreenContext();
   const { t } = useTranslation();
 
   // Load conversations on mount
@@ -232,6 +234,7 @@ export function ChatWidget() {
         const messagesWithContext = buildChatMessagesWithBudgetContext(
           chatMessages,
           budgetContext,
+          screenContext,
           updatedConv.budgetContextSent,
         );
 
