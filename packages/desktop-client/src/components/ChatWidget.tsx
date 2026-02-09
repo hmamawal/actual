@@ -5,7 +5,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from 'react';
-import { Trans } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 import { useBudgetContext } from '@desktop-client/hooks/useBudgetContext';
 import { buildChatMessagesWithBudgetContext } from '@desktop-client/services/budgetContextService';
@@ -56,6 +56,7 @@ export function ChatWidget() {
 
   // Get current budget context for AI awareness
   const budgetContext = useBudgetContext();
+  const { t } = useTranslation();
 
   // Load conversations on mount
   useEffect(() => {
