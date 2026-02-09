@@ -3,7 +3,7 @@ import { type BudgetContext } from '@desktop-client/hooks/useBudgetContext';
 import { type ChatMessage } from './openaiService';
 
 /**
- * Formats budget context into a CONCISE system message for the AI
+ * Formats budget context into a minimal system message for the AI
  * This is sent ONCE per conversation to save tokens
  */
 export function formatBudgetContextForAI(budgetContext: BudgetContext): string {
@@ -11,34 +11,18 @@ export function formatBudgetContextForAI(budgetContext: BudgetContext): string {
     return '';
   }
 
-  // Concise account summary - only names and balances
-  const accountsSummary = budgetContext.accounts
-    .filter(account => !account.closed) // Skip closed accounts to save tokens
+  const accountSummaries = budgetContext.accounts
+    .filter(account => !account.closed)
     .map(account => {
       const type = account.offbudget ? 'OFF' : 'ON';
-      const balance = (account.balance / 100).toFixed(2);
-      return `${account.name}(${type}):$${balance}`;
+      return `${account.name}(${type})[${account.id}]`;
     })
     .join(', ');
 
-  // Concise categories - just the names grouped
-  const categoriesByGroup = budgetContext.categories.reduce(
-    (acc, cat) => {
-      if (!acc[cat.group]) {
-        acc[cat.group] = [];
-      }
-      acc[cat.group].push(cat.name);
-      return acc;
-    },
-    {} as Record<string, string[]>,
-  );
+  const categoryCount = budgetContext.categories.length;
+  const payeeCount = budgetContext.payees.length;
 
-  const categoriesSummary = Object.entries(categoriesByGroup)
-    .map(([group, cats]) => `${group}: ${cats.join(', ')}`)
-    .join(' | ');
-
-  // VERY concise system message - essential info only
-  return `Budget: Accounts[${accountsSummary}]. Categories[${categoriesSummary}]. Answer financial questions using this data. For transactions, user will provide them when needed.`;
+  return `Budget metadata: Accounts[${accountSummaries}]. Counts[accounts:${budgetContext.accounts.length}, on:${budgetContext.onBudgetCount}, off:${budgetContext.offBudgetCount}, closed:${budgetContext.closedAccountCount}, categories:${categoryCount}, payees:${payeeCount}]. Fetch transaction or category details only when needed.`;
 }
 
 /**

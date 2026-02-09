@@ -16,6 +16,7 @@ import * as undo from 'loot-core/platform/client/undo';
 
 import { UserAccessPage } from './admin/UserAccess/UserAccessPage';
 import { BankSyncStatus } from './BankSyncStatus';
+import { ChatWidget } from './ChatWidget';
 import { CommandBar } from './CommandBar';
 import { GlobalKeys } from './GlobalKeys';
 import { MobileBankSyncAccountEditPage } from './mobile/banksync/MobileBankSyncAccountEditPage';
@@ -385,6 +386,7 @@ export function FinancesApp() {
           </ScrollProvider>
         </View>
       </View>
+      <ChatWidget />
     </View>
   );
 }

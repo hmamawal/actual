@@ -5,3 +5,4 @@
 5. add indexing for additional data and transactions
 6. make sure data and token usage is not being wasted
 7. allow the ai to execute python code in a secluded enviornment to be able to generate accurate visuals and do calculations
+8. make sure markdown can be displayed

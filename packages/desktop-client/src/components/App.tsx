@@ -19,7 +19,6 @@ import { init as initConnection, send } from 'loot-core/platform/client/fetch';
 
 import { AppBackground } from './AppBackground';
 import { BudgetMonthCountProvider } from './budget/BudgetMonthCountContext';
-import { ChatWidget } from './ChatWidget';
 import { DevelopmentTopBar } from './DevelopmentTopBar';
 import { FatalError } from './FatalError';
 import { FinancesApp } from './FinancesApp';
@@ -249,7 +248,6 @@ export function App() {
                       <Modals />
                     </ErrorBoundary>
                     <UpdateNotification />
-                    <ChatWidget />
                   </View>
                 </View>
               </DndProvider>
