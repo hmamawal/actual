@@ -1,23 +1,23 @@
-import { TransactionEntity } from '@actual-app/api/@types/loot-core/src/types/models/transaction.js';
+import { type TransactionEntity } from '@actual-app/api/@types/loot-core/src/types/models/transaction.js';
 
 import { getTransactions } from '../../actual-api.js';
 import { GroupAggregator } from '../aggregation/group-by.js';
-import type { Account, Transaction, Payee, Category } from '../types/domain.js';
+import type { Account, Category, Payee, Transaction } from '../types/domain.js';
 
 import { fetchAllCategories } from './fetch-categories.js';
 import { fetchAllPayees } from './fetch-payees.js';
 
 const groupAggregator = new GroupAggregator();
 
-interface TransactionLookupOptions {
+type TransactionLookupOptions = {
   includePayees: boolean;
   includeCategories: boolean;
-}
+};
 
-interface TransactionLookups {
+type TransactionLookups = {
   payeesById: Record<string, Payee>;
   categoriesById: Record<string, Category>;
-}
+};
 
 async function _buildTransactionLookups(
   options: TransactionLookupOptions,

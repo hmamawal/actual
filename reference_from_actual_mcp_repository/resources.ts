@@ -3,7 +3,7 @@
 // ----------------------------
 
 import api from '@actual-app/api';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { type Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
@@ -12,7 +12,7 @@ import {
 import { initActualApi, shutdownActualApi } from './actual-api.js';
 import { fetchAllAccounts } from './core/data/fetch-accounts.js';
 // Import types from types.ts
-import { Account, Transaction } from './types.js';
+import { type Account, type Transaction } from './types.js';
 import { formatAmount, formatDate, getDateRange } from './utils.js';
 
 export const setupResources = (server: Server): void => {
@@ -71,7 +71,7 @@ export const setupResources = (server: Server): void => {
         return {
           contents: [
             {
-              uri: uri,
+              uri,
               text: `# Actual Budget Accounts\n\n${accountsText}\n\nTotal Accounts: ${accounts.length}`,
               mimeType: 'text/markdown',
             },
@@ -91,7 +91,7 @@ export const setupResources = (server: Server): void => {
           return {
             contents: [
               {
-                uri: uri,
+                uri,
                 text: `Error: Account with ID ${accountId} not found`,
                 mimeType: 'text/plain',
               },
@@ -115,7 +115,7 @@ To view transactions for this account, use the get-transactions tool.`;
         return {
           contents: [
             {
-              uri: uri,
+              uri,
               text: details,
               mimeType: 'text/markdown',
             },
@@ -141,7 +141,7 @@ To view transactions for this account, use the get-transactions tool.`;
           return {
             contents: [
               {
-                uri: uri,
+                uri,
                 text: `No transactions found for account ID ${accountId} between ${startDate} and ${endDate}`,
                 mimeType: 'text/plain',
               },
@@ -169,8 +169,8 @@ To view transactions for this account, use the get-transactions tool.`;
         return {
           contents: [
             {
-              uri: uri,
-              text: text,
+              uri,
+              text,
               mimeType: 'text/markdown',
             },
           ],
@@ -181,7 +181,7 @@ To view transactions for this account, use the get-transactions tool.`;
       return {
         contents: [
           {
-            uri: uri,
+            uri,
             text: `Error: Unrecognized resource URI: ${uri}`,
             mimeType: 'text/plain',
           },

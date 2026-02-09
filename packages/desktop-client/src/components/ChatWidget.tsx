@@ -7,6 +7,8 @@ import {
 } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { MarkdownMessage } from './MarkdownMessage';
+
 import { useBudgetContext } from '@desktop-client/hooks/useBudgetContext';
 import { buildChatMessagesWithBudgetContext } from '@desktop-client/services/budgetContextService';
 import {
@@ -383,7 +385,7 @@ export function ChatWidget() {
               <button
                 onClick={() => setShowHistory(!showHistory)}
                 type="button"
-                title={t("Chat History")}
+                title={t('Chat History')}
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -414,7 +416,7 @@ export function ChatWidget() {
               <button
                 onClick={handleStartNewChat}
                 type="button"
-                title={t("New Chat")}
+                title={t('New Chat')}
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -431,7 +433,7 @@ export function ChatWidget() {
               <button
                 onClick={() => setIsOpen(false)}
                 type="button"
-                title={t("Close")}
+                title={t('Close')}
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -471,9 +473,9 @@ export function ChatWidget() {
                       fontWeight: 600,
                       color: '#6b7280',
                     }}
-                  ><Trans>
-                    Chat History
-                  </Trans></div>
+                  >
+                    <Trans>Chat History</Trans>
+                  </div>
                   <div
                     style={{
                       flex: 1,
@@ -551,7 +553,7 @@ export function ChatWidget() {
                             fontSize: '14px',
                             padding: '4px',
                           }}
-                          title={t("Delete")}
+                          title={t('Delete')}
                         >
                           ✕
                         </button>
@@ -607,22 +609,10 @@ export function ChatWidget() {
                       userSelect: 'text',
                     }}
                   >
-                    <div
-                      style={{
-                        maxWidth: '80%',
-                        padding: '10px 14px',
-                        borderRadius: '12px',
-                        backgroundColor:
-                          message.sender === 'user' ? '#2563eb' : '#e5e7eb',
-                        color: message.sender === 'user' ? 'white' : '#1f2937',
-                        fontSize: '14px',
-                        wordWrap: 'break-word',
-                        lineHeight: '1.4',
-                        userSelect: 'text',
-                      }}
-                    >
-                      {message.content}
-                    </div>
+                    <MarkdownMessage
+                      content={message.content}
+                      sender={message.sender}
+                    />
                   </div>
                 ))}
                 <div ref={messagesEndRef} />

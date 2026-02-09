@@ -4,17 +4,21 @@ import path from 'path';
 
 import api from '@actual-app/api';
 import {
-  APIAccountEntity,
-  APICategoryEntity,
-  APICategoryGroupEntity,
-  APIPayeeEntity,
+  type APIAccountEntity,
+  type APICategoryEntity,
+  type APICategoryGroupEntity,
+  type APIPayeeEntity,
 } from '@actual-app/api/@types/loot-core/src/server/api-models.js';
 import {
-  RuleEntity,
-  TransactionEntity,
+  type RuleEntity,
+  type TransactionEntity,
 } from '@actual-app/api/@types/loot-core/src/types/models/index.js';
 
-import { BudgetFile, TransactionData, UpdateTransactionData } from './types.js';
+import {
+  type BudgetFile,
+  type TransactionData,
+  type UpdateTransactionData,
+} from './types.js';
 
 const DEFAULT_DATA_DIR: string = path.resolve(os.homedir() || '.', '.actual');
 

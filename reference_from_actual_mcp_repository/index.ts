@@ -1,5 +1,5 @@
 // Orchestrator for get-transactions tool
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import {
@@ -8,7 +8,7 @@ import {
   type ToolInput,
 } from '../../types.js';
 import { getDateRange } from '../../utils.js';
-import { success, errorFromCatch } from '../../utils/response.js';
+import { errorFromCatch, success } from '../../utils/response.js';
 
 import { GetTransactionsDataFetcher } from './data-fetcher.js';
 import { GetTransactionsInputParser } from './input-parser.js';

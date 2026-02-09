@@ -18,7 +18,8 @@
     "playwright": "playwright"
   },
   "dependencies": {
-    "openai": "^6.18.0"
+    "openai": "^6.18.0",
+    "rehype-highlight": "^7.0.2"
   },
   "devDependencies": {
     "@actual-app/components": "workspace:*",

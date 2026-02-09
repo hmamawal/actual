@@ -12,11 +12,11 @@ import { z } from 'zod';
 const _ToolInputSchema = ToolSchema.shape.inputSchema;
 export type ToolInput = z.infer<typeof _ToolInputSchema>;
 
-export interface BudgetFile {
+export type BudgetFile = {
   id?: string;
   cloudFileId?: string;
   name: string;
-}
+};
 
 // Type definitions for tool arguments
 export const GetTransactionsArgsSchema = z.object({
@@ -247,39 +247,39 @@ export const TransactionDataSchema = CreateTransactionArgsSchema.omit({
 export type TransactionData = z.infer<typeof TransactionDataSchema>;
 
 // Additional types used in implementation
-export interface CategoryGroupInfo {
+export type CategoryGroupInfo = {
   id: string;
   name: string;
   isIncome: boolean;
   isSavingsOrInvestment: boolean;
-}
+};
 
-export interface CategorySpending {
+export type CategorySpending = {
   name: string;
   group: string;
   isIncome: boolean;
   total: number;
   transactions: number;
-}
+};
 
-export interface GroupSpending {
+export type GroupSpending = {
   name: string;
   total: number;
   categories: CategorySpending[];
-}
+};
 
-export interface MonthData {
+export type MonthData = {
   year: number;
   month: number;
   income: number;
   expenses: number;
   investments: number;
   transactions: number;
-}
+};
 
-export interface MonthBalance {
+export type MonthBalance = {
   year: number;
   month: number;
   balance: number;
   transactions: number;
-}
+};

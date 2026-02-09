@@ -3,10 +3,10 @@
 // ----------------------------
 
 import {
-  CallToolResult,
-  TextContent,
-  ImageContent,
-  AudioContent,
+  type CallToolResult,
+  type TextContent,
+  type ImageContent,
+  type AudioContent,
 } from '@modelcontextprotocol/sdk/types.js';
 
 /**
