@@ -1,8 +1,8 @@
-1. add the ability to view the reports tab and for the ai to be able to create a custom report
-2. add more flexibility to report creation
-3. add web search function
+1. add the ability for the ai to view and understand the reports in the reports section of actual budget and for the ai to be able to create a custom report based on your description
+2. add more flexibility to report creation (i.e. currently if you do a cash flow report, there isn't really flexibility with being able to select certain transactions. i want that flexibility added)
+3. add web search function (use google api, where the key is pulled from the .end.local file... ad instructions for how to use it to. make it useable when selected or typing something like "/search" to activate the google search)
 4. add ability for the ai to see the screen you're currently looking at (or at least the current data being displayed to you) so that answers can be generated based on that
-5. add indexing for additional data and transactions
-6. make sure data and token usage is not being wasted
-7. allow the ai to execute python code in a secluded enviornment to be able to generate accurate visuals and do calculations
-8. make sure markdown can be displayed
+5. add ability for the ai to answer questions using context / indexing ability from the actual budget documentation. "/docs" could be used for this
+6. allow the ai chat to execute python code in a secluded enviornment to be able to generate accurate visuals and do calculations to better be able to answer user questions based on the actual budget data. 
+7. make sure markdown can be displayed in the chat window so that the user can understand output better
+8. add documentation for the ai chat features that have been added pulling from the documents like agents.md, ai_chat_setup.md, budget_context_ai.md, chat_text_selection_feature.md, code_review_guidelines.md, etc.
