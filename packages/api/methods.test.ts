@@ -860,3 +860,66 @@ test('Schedules: successfully complete schedules operations', async () => {
     ]),
   );
 });
+
+// api: getBudgetSummary
+test('getBudgetSummary: successfully retrieves comprehensive budget data', async () => {
+  await api.loadBudget(budgetName);
+
+  // Test with all options enabled
+  const fullSummary = await api.getBudgetSummary({
+    transactionDays: 90,
+    includeBalances: true,
+    includeTransactions: true,
+    includeCategories: true,
+    includePayees: true,
+    includeBudgetMonths: true,
+  });
+
+  // Verify accounts are present
+  expect(fullSummary.accounts).toBeDefined();
+  expect(Array.isArray(fullSummary.accounts)).toBe(true);
+  expect(fullSummary.accounts.length).toBeGreaterThan(0);
+
+  // Verify accounts have balances
+  const accountWithBalance = fullSummary.accounts.find(acc => acc.balance !== undefined);
+  expect(accountWithBalance).toBeDefined();
+
+  // Verify transactions are present
+  expect(fullSummary.transactions).toBeDefined();
+  expect(Array.isArray(fullSummary.transactions)).toBe(true);
+
+  // Verify categories are present
+  expect(fullSummary.categories).toBeDefined();
+  expect(Array.isArray(fullSummary.categories)).toBe(true);
+
+  // Verify category groups are present
+  expect(fullSummary.categoryGroups).toBeDefined();
+  expect(Array.isArray(fullSummary.categoryGroups)).toBe(true);
+
+  // Verify payees are present
+  expect(fullSummary.payees).toBeDefined();
+  expect(Array.isArray(fullSummary.payees)).toBe(true);
+
+  // Verify budget months are present
+  expect(fullSummary.budgetMonths).toBeDefined();
+  expect(Array.isArray(fullSummary.budgetMonths)).toBe(true);
+
+  // Test with minimal options
+  const minimalSummary = await api.getBudgetSummary({
+    includeBalances: false,
+    includeTransactions: false,
+    includeCategories: false,
+    includePayees: false,
+    includeBudgetMonths: false,
+  });
+
+  // Verify accounts are still present
+  expect(minimalSummary.accounts).toBeDefined();
+  expect(Array.isArray(minimalSummary.accounts)).toBe(true);
+
+  // Verify optional data is not included
+  expect(minimalSummary.transactions).toBeUndefined();
+  expect(minimalSummary.categories).toBeUndefined();
+  expect(minimalSummary.payees).toBeUndefined();
+  expect(minimalSummary.budgetMonths).toBeUndefined();
+});

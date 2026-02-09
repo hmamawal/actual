@@ -329,6 +329,140 @@ export function deleteSchedule(scheduleId: APIScheduleEntity['id']) {
   return send('api/schedule-delete', scheduleId);
 }
 
+/**
+ * Get a comprehensive summary of the budget including accounts with balances,
+ * recent transactions, categories, payees, and budget data.
+ * This is optimized for AI consumption and external integrations.
+ *
+ * @param options Configuration for what data to include
+ * @returns Comprehensive budget summary
+ */
+export async function getBudgetSummary(options?: {
+  transactionDays?: number;
+  includeBalances?: boolean;
+  includeTransactions?: boolean;
+  includeCategories?: boolean;
+  includePayees?: boolean;
+  includeBudgetMonths?: boolean;
+}) {
+  const {
+    transactionDays = 90,
+    includeBalances = true,
+    includeTransactions = true,
+    includeCategories = true,
+    includePayees = true,
+    includeBudgetMonths = false,
+  } = options || {};
+
+  const summary: {
+    accounts: Array<
+      APIAccountEntity & {
+        balance?: number;
+        transactionCount?: number;
+      }
+    >;
+    transactions?: TransactionEntity[];
+    categories?: APICategoryEntity[];
+    categoryGroups?: APICategoryGroupEntity[];
+    payees?: APIPayeeEntity[];
+    budgetMonths?: string[];
+  } = {
+    accounts: [],
+  };
+
+  // Get accounts
+  const accounts = await getAccounts();
+  summary.accounts = accounts;
+
+  // Get balances for each account if requested
+  if (includeBalances) {
+    const accountsWithBalances = await Promise.all(
+      accounts.map(async account => {
+        try {
+          const balance = await getAccountBalance(account.id);
+          return { ...account, balance };
+        } catch (_error) {
+          return { ...account, balance: 0 };
+        }
+      }),
+    );
+    summary.accounts = accountsWithBalances;
+  }
+
+  // Get recent transactions if requested
+  if (includeTransactions) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - transactionDays);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    const allTransactions: TransactionEntity[] = [];
+
+    for (const account of accounts) {
+      try {
+        const transactions = await getTransactions(
+          account.id,
+          startDateStr,
+          endDateStr,
+        );
+        allTransactions.push(...transactions);
+      } catch (_error) {
+        // Skip accounts that error
+        continue;
+      }
+    }
+
+    summary.transactions = allTransactions;
+
+    // Add transaction counts to accounts
+    const transactionCounts = allTransactions.reduce(
+      (counts, transaction) => {
+        const accountId = transaction.account;
+        counts[accountId] = (counts[accountId] || 0) + 1;
+        return counts;
+      },
+      {} as Record<string, number>,
+    );
+
+    summary.accounts = summary.accounts.map(account => ({
+      ...account,
+      transactionCount: transactionCounts[account.id] || 0,
+    }));
+  }
+
+  // Get categories if requested
+  if (includeCategories) {
+    const categories = (await getCategories()) as APICategoryEntity[];
+    summary.categories = categories;
+  }
+
+  // Get category groups if requested (includes categories nested)
+  const categoryGroups =
+    (await getCategoryGroups()) as APICategoryGroupEntity[];
+  summary.categoryGroups = categoryGroups;
+
+  // Get payees if requested
+  if (includePayees) {
+    const payees = await getPayees();
+    summary.payees = payees;
+  }
+
+  // Get budget months if requested
+  if (includeBudgetMonths) {
+    try {
+      const budgetMonthsList = await getBudgetMonths();
+      summary.budgetMonths = budgetMonthsList;
+    } catch (_error) {
+      // Budget months might not be available
+      summary.budgetMonths = [];
+    }
+  }
+
+  return summary;
+}
+
 export function getSchedules() {
   return send('api/schedules-get');
 }
