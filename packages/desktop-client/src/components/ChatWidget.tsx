@@ -22,6 +22,12 @@ import {
   type ChatConversation,
 } from '@desktop-client/services/chatHistoryService';
 import {
+  formatSearchResultsForAI,
+  formatSearchResultsForChat,
+  isSearchConfigured,
+  searchWeb,
+} from '@desktop-client/services/googleSearchService';
+import {
   sendChatMessage,
   type ChatMessage,
 } from '@desktop-client/services/openaiService';
@@ -114,10 +120,12 @@ export function ChatWidget() {
   const handleSendMessage = async () => {
     if (inputValue.trim() === '' || !currentConversation) return;
 
+    const userInputContent = inputValue.trim();
+
     // Add user message
     const userMessage: Message = {
       id: `msg-${Date.now()}`,
-      content: inputValue,
+      content: userInputContent,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -127,7 +135,7 @@ export function ChatWidget() {
     // Update conversation title if this is the first message
     let updatedTitle = currentConversation.title;
     if (currentConversation.messages.length === 0) {
-      updatedTitle = generateConversationTitle(inputValue);
+      updatedTitle = generateConversationTitle(userInputContent);
     }
 
     const updatedConv = updateConversation(currentConversation, {
@@ -141,41 +149,82 @@ export function ChatWidget() {
     setError(null);
 
     try {
-      // Convert messages to OpenAI format
-      const chatMessages: ChatMessage[] = newMessages.map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.content,
-      }));
+      // Check for /search command
+      const searchMatch = userInputContent.match(/^\/search\s+(.+)$/i);
+      
+      if (searchMatch) {
+        // Handle web search
+        if (!isSearchConfigured()) {
+          throw new Error(
+            'Web search is not configured. Please add VITE_GOOGLE_API_KEY and VITE_GOOGLE_SEARCH_ENGINE_ID to your .env.local file.',
+          );
+        }
 
-      // Add budget context only if not already sent (saves tokens!)
-      const messagesWithContext = buildChatMessagesWithBudgetContext(
-        chatMessages,
-        budgetContext,
-        updatedConv.budgetContextSent,
-      );
+        const searchQuery = searchMatch[1];
+        const searchResults = await searchWeb(searchQuery, 5);
+        
+        // Format results for chat display
+        const searchResultsText = formatSearchResultsForChat(
+          searchResults,
+          searchQuery,
+        );
 
-      // Get response from OpenAI
-      const response = await sendChatMessage(messagesWithContext);
+        const botMessage: Message = {
+          id: `msg-${Date.now()}-bot`,
+          content: searchResultsText,
+          sender: 'bot',
+          timestamp: new Date(),
+        };
 
-      const botMessage: Message = {
-        id: `msg-${Date.now()}-bot`,
-        content: response,
-        sender: 'bot',
-        timestamp: new Date(),
-      };
+        const finalConv = updateConversation(updatedConv, {
+          messages: [...newMessages, botMessage],
+        });
 
-      const finalConv = updateConversation(updatedConv, {
-        messages: [...newMessages, botMessage],
-        budgetContextSent: true, // Mark context as sent
-      });
+        setCurrentConversation(finalConv);
 
-      setCurrentConversation(finalConv);
+        // Update in conversations list
+        setConversations(prev => {
+          const filtered = prev.filter(c => c.id !== finalConv.id);
+          return sortConversationsByRecent([finalConv, ...filtered]);
+        });
+      } else {
+        // Normal AI chat flow
+        // Convert messages to OpenAI format
+        const chatMessages: ChatMessage[] = newMessages.map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content,
+        }));
 
-      // Update in conversations list
-      setConversations(prev => {
-        const filtered = prev.filter(c => c.id !== finalConv.id);
-        return sortConversationsByRecent([finalConv, ...filtered]);
-      });
+        // Add budget context only if not already sent (saves tokens!)
+        const messagesWithContext = buildChatMessagesWithBudgetContext(
+          chatMessages,
+          budgetContext,
+          updatedConv.budgetContextSent,
+        );
+
+        // Get response from OpenAI
+        const response = await sendChatMessage(messagesWithContext);
+
+        const botMessage: Message = {
+          id: `msg-${Date.now()}-bot`,
+          content: response,
+          sender: 'bot',
+          timestamp: new Date(),
+        };
+
+        const finalConv = updateConversation(updatedConv, {
+          messages: [...newMessages, botMessage],
+          budgetContextSent: true, // Mark context as sent
+        });
+
+        setCurrentConversation(finalConv);
+
+        // Update in conversations list
+        setConversations(prev => {
+          const filtered = prev.filter(c => c.id !== finalConv.id);
+          return sortConversationsByRecent([finalConv, ...filtered]);
+        });
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to get response from AI';
@@ -595,6 +644,14 @@ export function ChatWidget() {
                     <br />
                     Ask me questions about your accounts, categories, or
                     finances!
+                    <br />
+                    <br />
+                    {isSearchConfigured() && (
+                      <>
+                        💡 Use <strong>/search [query]</strong> to search the web
+                        <br />
+                      </>
+                    )}
                   </div>
                 )}
 
