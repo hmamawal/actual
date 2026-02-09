@@ -436,12 +436,12 @@ export async function getBudgetSummary(options?: {
   if (includeCategories) {
     const categories = (await getCategories()) as APICategoryEntity[];
     summary.categories = categories;
-  }
 
-  // Get category groups if requested (includes categories nested)
-  const categoryGroups =
-    (await getCategoryGroups()) as APICategoryGroupEntity[];
-  summary.categoryGroups = categoryGroups;
+    // Get category groups if requested (includes categories nested)
+    const categoryGroups =
+      (await getCategoryGroups()) as APICategoryGroupEntity[];
+    summary.categoryGroups = categoryGroups;
+  }
 
   // Get payees if requested
   if (includePayees) {
